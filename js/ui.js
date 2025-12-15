@@ -110,11 +110,21 @@ function renderLayout() {
             <button id="exportBtn" class="btn btn-sm" title="이미지로 저장">📷 저장</button>
         </div>
         
-        <!-- Date Nav Top -->
+        <!-- Date Nav Top with Stats -->
         <div class="date-nav-top">
             <button id="prevDate" class="btn btn-icon">&lt;</button>
             <div class="date-display-large" id="currentDateDisplay">${currentDate.toLocaleDateString('ko-KR')}</div>
             <button id="nextDate" class="btn btn-icon">&gt;</button>
+            <div class="top-stats-divider">|</div>
+            <div class="top-stats-item">
+                <span class="top-stat-label">총 학습 시간</span>
+                <span class="top-stat-value" id="top-total-focus-time">0시간 0분</span>
+            </div>
+            <div class="top-stats-divider">|</div>
+            <div class="top-stats-item">
+                <span class="top-stat-label">목표 달성률</span>
+                <span class="top-stat-value" id="top-goal-rate-display">0%</span>
+            </div>
         </div>
 
         <div class="app-container">
@@ -138,8 +148,37 @@ function renderLayout() {
     document.getElementById('exportBtn').addEventListener('click', handleExport);
     document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
 
-    renderSidebar();
+    renderSidebar(); // Will now assume sidebar stats might be minimal or removed, but we'll keep for now and just update content.
+    updateTopStats();
     renderScheduleList();
+}
+
+function updateTopStats() {
+    const periods = PeriodRepository.getPeriodsForDate(getFormattedDate(currentDate));
+    let totalCompletedStudyMins = periods.filter(p => p.type === 'study' && p.completed).reduce((a, b) => a + b.duration, 0);
+    const hours = Math.floor(totalCompletedStudyMins / 60);
+    const mins = totalCompletedStudyMins % 60;
+    const totalTimeStr = `${hours}시간 ${mins}분`;
+
+    let totalTodos = 0;
+    let completedTodos = 0;
+    periods.forEach(p => {
+        if (p.todos) {
+            totalTodos += p.todos.length;
+            completedTodos += p.todos.filter(t => t.completed).length;
+        }
+    });
+    const rate = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
+
+    const timeEl = document.getElementById('top-total-focus-time');
+    const rateEl = document.getElementById('top-goal-rate-display');
+
+    if (timeEl) timeEl.textContent = totalTimeStr;
+    if (rateEl) rateEl.textContent = `${rate}%`;
+
+    // Also update export source elements if we remove sidebar stats?
+    // Export uses #total-focus-time which was in sidebar. We should update Export to use these new IDs or keep hidden ones.
+    // Let's keep sidebar stats for now or hide them via CSS if user wants, but for now I'll duplicate the logic or just let sidebar render.
 }
 
 // ... (renderSidebar implementation below in next chunk)
@@ -758,8 +797,8 @@ function handleExport() {
     const dateStr = currentDate.toLocaleDateString('ko-KR');
 
     // Custom Export Layout
-    const totalTimeText = document.getElementById('total-focus-time').textContent;
-    const goalRateText = document.getElementById('goal-rate-display').textContent;
+    const totalTimeText = document.getElementById('top-total-focus-time').textContent;
+    const goalRateText = document.getElementById('top-goal-rate-display').textContent;
     const schedule = document.getElementById('list-content').innerHTML;
 
     const computedFont = getComputedStyle(document.body).fontFamily;

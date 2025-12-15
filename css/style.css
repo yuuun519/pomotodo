@@ -96,6 +96,10 @@ textarea {
     align-items: center;
     margin-bottom: var(--spacing-xl);
     gap: var(--spacing-lg);
+    background: var(--color-bg-card);
+    padding: var(--spacing-md) var(--spacing-xl);
+    border-radius: var(--border-radius-lg);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .date-display-large {
@@ -103,6 +107,67 @@ textarea {
     font-weight: 700;
     letter-spacing: 0.05em;
     color: var(--color-text-primary);
+    min-width: 280px;
+    text-align: center;
+}
+
+.top-stats-divider {
+    color: var(--border-color);
+    font-size: 2rem;
+    font-weight: 300;
+    margin: 0 var(--spacing-sm);
+}
+
+.top-stats-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 120px;
+}
+
+.top-stat-label {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 4px;
+}
+
+.top-stat-value {
+    font-size: 1.5rem;
+    /* Larger font size as requested */
+    font-weight: 700;
+    color: var(--color-accent);
+}
+
+/* Hide old sidebar stats since we moved them */
+#sidebar-stats-section {
+    display: none;
+}
+
+@media (max-width: 600px) {
+    .date-nav-top {
+        flex-wrap: wrap;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-md);
+    }
+
+    .top-stats-divider {
+        display: none;
+        /* Hide dividers on mobile if wrapping */
+    }
+
+    .top-stats-item {
+        width: 45%;
+        /* 2 per row */
+        margin-top: 10px;
+    }
+
+    .date-display-large {
+        width: 100%;
+        order: -1;
+        /* Keep date on top */
+        margin-bottom: 10px;
+    }
+
 }
 
 /* 2-Column Layout */
