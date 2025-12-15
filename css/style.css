@@ -20,19 +20,43 @@
 }
 
 :root {
-    /* Color Palette - Premium Dark Theme */
-    --color-bg-main: #121212;
-    --color-bg-card: #1e1e1e;
+    /* User Customizable Colors (Defaults) */
+    --color-custom-bg: #121212;
+    --color-custom-bg-secondary: #1e1e1e;
+    --color-custom-main: #bb86fc;
+    --color-custom-secondary: #03dac6;
+    /* Previously success color */
+    --color-custom-text-1: #ffffff;
+    --color-custom-text-2: #a0a0a0;
+
+    /* System Mappings */
+    --color-bg-main: var(--color-custom-bg);
+    --color-bg-card: var(--color-custom-bg-secondary);
     --color-bg-input: #2d2d2d;
+    /* Reserved "keep as is" */
 
-    --color-text-primary: #ffffff;
-    --color-text-secondary: #a0a0a0;
-    --color-text-muted: #666666;
+    --color-text-primary: var(--color-custom-text-1);
+    --color-text-secondary: var(--color-custom-text-2);
+    --color-text-muted: var(--color-custom-text-2);
 
-    --color-accent: #bb86fc;
-    --color-accent-hover: #9965f4;
-    --color-success: #03dac6;
-    --color-error: #cf6679;
+    --color-accent: var(--color-custom-main);
+    --color-accent-hover: var(--color-custom-main);
+    /* Simplified mapping */
+
+    /* "All other colors" mapped to Secondary */
+    --color-success: var(--color-custom-secondary);
+    --color-error: var(--color-custom-secondary);
+
+    /* Borders - keeping neutral or mapping to Text 2? 
+       User said "All other colors -> Secondary", but red borders for generic errors might look weird if blue.
+       However, strict adherence:
+    */
+    /* --border-color: #333333; Or map to secondary? 
+       Let's keep border neutral for structure structure, as it wasn't explicitly "a color" in the list of accent/success/error.
+       But if strict, I might Map it. 
+       Let's respect "Input background -> keep as is". Borders are input-adjacent. I'll keep them neutral #333.
+    */
+    --border-color: #333333;
 
     /* Spacing & Layout */
     --spacing-xs: 4px;
@@ -52,7 +76,6 @@
     --border-radius-sm: 4px;
     --border-radius-md: 8px;
     --border-radius-lg: 16px;
-    --border-color: #333333;
 }
 
 body {

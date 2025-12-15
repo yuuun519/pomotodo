@@ -8,6 +8,7 @@ let currentTimerDuration = 0;
 
 export function renderApp() {
     applyFontSettings();
+    applyColorSettings();
     initTimer();
     renderLayout();
     initModal();
@@ -263,6 +264,39 @@ function initModal() {
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label style="margin-bottom:8px; display:block; border-top: 1px solid #333; padding-top: 15px;">색상 (Colors)</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 0.8rem; color: #aaa;">배경 (Main Bg)</label>
+                            <div style="display:flex; gap: 5px;">
+                                <input type="color" name="colBgMain" value="#121212" style="width: 100%; height: 35px; border:none; padding:0; background:none;">
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size: 0.8rem; color: #aaa;">카드 배경 (Card Bg)</label>
+                            <input type="color" name="colBgCard" value="#1e1e1e" style="width: 100%; height: 35px; border:none; padding:0; background:none;">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.8rem; color: #aaa;">메인 색상 (Main)</label>
+                            <input type="color" name="colMain" value="#bb86fc" style="width: 100%; height: 35px; border:none; padding:0; background:none;">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.8rem; color: #aaa;">보조 색상 (Secondary)</label>
+                            <input type="color" name="colSecondary" value="#03dac6" style="width: 100%; height: 35px; border:none; padding:0; background:none;">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.8rem; color: #aaa;">텍스트 (Text 1)</label>
+                            <input type="color" name="colText1" value="#ffffff" style="width: 100%; height: 35px; border:none; padding:0; background:none;">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.8rem; color: #aaa;">서브 텍스트 (Text 2)</label>
+                            <input type="color" name="colText2" value="#a0a0a0" style="width: 100%; height: 35px; border:none; padding:0; background:none;">
+                        </div>
+                    </div>
+                    <button type="button" id="resetColorsBtn" style="margin-top:10px; background:none; border:1px solid #444; color:#aaa; padding:5px 10px; border-radius:4px; font-size:0.8rem; cursor:pointer; width:100%;">기본 색상으로 초기화</button>
+                </div>
+
                 <button type="submit" class="btn btn-primary full-width" style="margin-top: 10px;">저장</button>
             </form>
         </div>
@@ -278,6 +312,17 @@ function initModal() {
         } else {
             customGroup.classList.add('hidden');
         }
+    });
+
+    const resetColorsBtn = settingsModal.querySelector('#resetColorsBtn');
+    resetColorsBtn.addEventListener('click', () => {
+        const form = settingsModal.querySelector('#settingsForm');
+        form.elements['colBgMain'].value = '#121212';
+        form.elements['colBgCard'].value = '#1e1e1e';
+        form.elements['colMain'].value = '#bb86fc';
+        form.elements['colSecondary'].value = '#03dac6';
+        form.elements['colText1'].value = '#ffffff';
+        form.elements['colText2'].value = '#a0a0a0';
     });
 
     // Global Close
@@ -412,6 +457,14 @@ function openSettingsModal() {
     form.elements['fontFamily'].value = family;
     form.elements['customFontCss'].value = customCss;
 
+    const colors = state.settings?.colors || {};
+    form.elements['colBgMain'].value = colors.bgMain || '#121212';
+    form.elements['colBgCard'].value = colors.bgCard || '#1e1e1e';
+    form.elements['colMain'].value = colors.main || '#bb86fc';
+    form.elements['colSecondary'].value = colors.secondary || '#03dac6';
+    form.elements['colText1'].value = colors.text1 || '#ffffff';
+    form.elements['colText2'].value = colors.text2 || '#a0a0a0';
+
     const customGroup = document.getElementById('customFontGroup');
     if (family === 'custom') {
         customGroup.classList.remove('hidden');
@@ -435,9 +488,19 @@ function handleSettingsSubmit(e) {
     state.settings.fontFamily = family;
     state.settings.customFontCss = customCss;
 
+    state.settings.colors = {
+        bgMain: form.elements['colBgMain'].value,
+        bgCard: form.elements['colBgCard'].value,
+        main: form.elements['colMain'].value,
+        secondary: form.elements['colSecondary'].value,
+        text1: form.elements['colText1'].value,
+        text2: form.elements['colText2'].value
+    };
+
     saveState(state);
 
-    applyFontSettings(); // Apply new fonts
+    applyFontSettings();
+    applyColorSettings(); // Apply new colors
     renderSidebar(); // Update sidebar immediately
     // Ideally re-render whole layout to ensure font applies everywhere if needed, 
     // but CSS variable change should be instant.
@@ -1014,5 +1077,22 @@ function applyFontSettings() {
     // We update the variable.
     document.documentElement.style.setProperty('--font-family', `"${applyFamily}", sans-serif`);
 
+    document.documentElement.style.setProperty('--font-family', `"${applyFamily}", sans-serif`);
+
     // Also force it for good measure on body if needed, but style.css handles it.
+}
+
+function applyColorSettings() {
+    const state = getState();
+    const colors = state.settings?.colors;
+
+    if (!colors) return; // Use defaults from CSS if no state
+
+    const root = document.documentElement.style;
+    if (colors.bgMain) root.setProperty('--color-custom-bg', colors.bgMain);
+    if (colors.bgCard) root.setProperty('--color-custom-bg-secondary', colors.bgCard);
+    if (colors.main) root.setProperty('--color-custom-main', colors.main);
+    if (colors.secondary) root.setProperty('--color-custom-secondary', colors.secondary);
+    if (colors.text1) root.setProperty('--color-custom-text-1', colors.text1);
+    if (colors.text2) root.setProperty('--color-custom-text-2', colors.text2);
 }
