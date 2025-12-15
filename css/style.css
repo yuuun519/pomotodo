@@ -251,3 +251,66 @@ body {
     width: 100%;
     margin-top: var(--spacing-md);
 }
+
+/* Timer Bar */
+.timer-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: var(--color-bg-card);
+    border-top: 2px solid var(--color-accent);
+    padding: var(--spacing-md);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 -4px 10px rgba(0,0,0,0.5);
+    z-index: 100;
+}
+.timer-bar.hidden {
+    display: none;
+}
+.timer-info {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--color-text-primary);
+}
+.timer-info span:first-child {
+    margin-right: var(--spacing-md);
+    color: var(--color-accent);
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.btn-sm {
+    padding: 4px 12px;
+    font-size: 0.9rem;
+    margin-left: 8px;
+    border-radius: 4px;
+    background-color: #333;
+    color: #fff;
+}
+.btn-danger {
+    background-color: var(--color-error);
+}
+.period-actions {
+    margin-left: var(--spacing-md);
+}
+.period-card.completed {
+    opacity: 0.5;
+    border-color: var(--color-success);
+}
+.btn-start {
+    color: var(--color-accent);
+    font-size: 1.5rem;
+    background: rgba(187, 134, 252, 0.1);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn-start:hover {
+    background: rgba(187, 134, 252, 0.3);
+    transform: scale(1.1);
+}
