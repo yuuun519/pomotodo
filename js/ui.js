@@ -28,7 +28,7 @@ function initTimer() {
                 const label = nextPeriod.type === 'study' ? '집중 중...' : '휴식 중...';
                 startPeriod(nextPeriod.id, nextPeriod.duration, label);
             } else {
-                alert('모든 일정이 완료되었습니다! 수고하셨습니다.');
+                showCustomAlert('모든 일정이 완료되었습니다! 수고하셨습니다.');
                 updateTimerDisplay(0);
                 renderLayout();
                 updateControls('stopped');
@@ -216,6 +216,84 @@ function initModal() {
             event.target.classList.add('hidden');
         }
     };
+
+    initGlobalModals();
+}
+
+function initGlobalModals() {
+    if (!document.getElementById('globalConfirmModal')) {
+        const cm = document.createElement('div');
+        cm.id = 'globalConfirmModal';
+        cm.className = 'modal hidden';
+        cm.style.zIndex = '2000'; // Ensure on top
+        cm.innerHTML = `
+            <div class="modal-content" style="max-width: 400px; text-align: center;">
+                <h3 id="globalConfirmTitle" style="margin-top:0">확인</h3>
+                <p id="globalConfirmMessage" style="margin-bottom: 20px; color: #ccc;"></p>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button id="globalConfirmCancelBtn" class="btn btn-secondary" style="flex: 1;">취소</button>
+                    <button id="globalConfirmOkBtn" class="btn btn-primary" style="flex: 1;">확인</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(cm);
+    }
+
+    if (!document.getElementById('globalAlertModal')) {
+        const am = document.createElement('div');
+        am.id = 'globalAlertModal';
+        am.className = 'modal hidden';
+        am.style.zIndex = '2000';
+        am.innerHTML = `
+            <div class="modal-content" style="max-width: 400px; text-align: center;">
+                <h3 id="globalAlertTitle" style="margin-top:0; display:none;">알림</h3>
+                <p id="globalAlertMessage" style="margin-bottom: 20px; color: #ccc;"></p>
+                <button id="globalAlertOkBtn" class="btn btn-primary full-width">확인</button>
+            </div>
+        `;
+        document.body.appendChild(am);
+    }
+}
+
+function showCustomConfirm(message, onConfirm) {
+    const modal = document.getElementById('globalConfirmModal');
+    const msgEl = document.getElementById('globalConfirmMessage');
+    const okBtn = document.getElementById('globalConfirmOkBtn');
+    const cancelBtn = document.getElementById('globalConfirmCancelBtn');
+
+    msgEl.textContent = message;
+    modal.classList.remove('hidden');
+
+    // Remove old listeners to prevent stacking
+    const newOk = okBtn.cloneNode(true);
+    const newCancel = cancelBtn.cloneNode(true);
+    okBtn.parentNode.replaceChild(newOk, okBtn);
+    cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+
+    newOk.addEventListener('click', () => {
+        modal.classList.add('hidden');
+        if (onConfirm) onConfirm();
+    });
+
+    newCancel.addEventListener('click', () => {
+        modal.classList.add('hidden');
+    });
+}
+
+function showCustomAlert(message) {
+    const modal = document.getElementById('globalAlertModal');
+    const msgEl = document.getElementById('globalAlertMessage');
+    const okBtn = document.getElementById('globalAlertOkBtn');
+
+    msgEl.textContent = message;
+    modal.classList.remove('hidden');
+
+    const newOk = okBtn.cloneNode(true);
+    okBtn.parentNode.replaceChild(newOk, okBtn);
+
+    newOk.addEventListener('click', () => {
+        modal.classList.add('hidden');
+    });
 }
 
 function handleAddPeriodSubmit(e) {
@@ -366,7 +444,7 @@ function renderSidebar() {
 
     document.getElementById('toggleTimerBtn').addEventListener('click', handleToggleTimer);
     document.getElementById('resetTimerBtn').addEventListener('click', () => {
-        if (confirm('타이머를 초기화 하시겠습니까?')) {
+        showCustomConfirm('타이머를 초기화 하시겠습니까?', () => {
             activeTimer.stop();
 
             // Allow recalculation
@@ -409,7 +487,7 @@ function renderSidebar() {
             }
 
             updateControls('stopped');
-        }
+        });
     });
 
     // Sync Initial State (if actively running or paused mid-way)
@@ -561,10 +639,10 @@ function attachCardListeners() {
     document.querySelectorAll('.btn-delete-group-text').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const gid = e.currentTarget.dataset.groupId;
-            if (confirm('삭제하시겠습니까?')) {
+            showCustomConfirm('삭제하시겠습니까?', () => {
                 PeriodRepository.deletePeriodGroup(getFormattedDate(currentDate), gid);
                 renderLayout();
-            }
+            });
         });
     });
 
@@ -686,7 +764,7 @@ function handleExport() {
         container.innerHTML = '';
     }).catch(err => {
         console.error(err);
-        alert('이미지 저장 실패');
+        showCustomAlert('이미지 저장 실패');
     });
 }
 
@@ -702,7 +780,7 @@ function handleToggleTimer() {
                 const label = nextPeriod.type === 'study' ? '집중 중...' : '휴식 중...';
                 startPeriod(nextPeriod.id, nextPeriod.duration, label);
             } else {
-                alert('모든 일정이 완료되었습니다! 새로운 세션을 추가하세요.');
+                showCustomAlert('모든 일정이 완료되었습니다! 새로운 세션을 추가하세요.');
             }
         } else {
             activeTimer.intervalId = setInterval(() => activeTimer.tick(), 1000);
