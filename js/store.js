@@ -74,6 +74,15 @@ export const PeriodRepository = {
 
         state.schedule[dateString].periods = periods.filter(p => p.id !== periodId);
         saveState(state);
+    },
+
+    deletePeriodGroup: (dateString, groupId) => {
+        const state = getState();
+        const periods = state.schedule[dateString]?.periods;
+        if (!periods) return;
+
+        state.schedule[dateString].periods = periods.filter(p => p.groupId !== groupId);
+        saveState(state);
     }
 };
 

@@ -4,11 +4,11 @@ import { Timer } from './timer.js';
 
 let currentDate = new Date();
 let activeTimer = null;
-let currentTimerDuration = 0; // Needed for circle calculation
+let currentTimerDuration = 0;
 
 export function renderApp() {
     initTimer();
-    renderHeader(); // Initial structure including Timer
+    renderHeader();
     renderSchedule(getFormattedDate(currentDate));
     initModal();
 }
@@ -19,14 +19,20 @@ function initTimer() {
             updateTimerDisplay(remainingSeconds);
         },
         onComplete: (periodId) => {
-            // PeriodRepository.updatePeriod(getFormattedDate(currentDate), periodId, { completed: true });
+            // Mark as complete and find next?
+            PeriodRepository.updatePeriod(getFormattedDate(currentDate), periodId, { completed: true });
+
+            // Audio Notification (Placeholder)
+            // playNotificationSound(); 
+
             alert('세션 종료! 수고하셨습니다.');
-            // renderTimerBar(false); // We keep the top timer, just reset?
             updateTimerDisplay(0);
             renderSchedule(getFormattedDate(currentDate));
+            updateControls('stopped');
+
+            // Optional: Auto-start next? For now just stop.
         },
         onStatusChange: (status) => {
-            console.log('Timer status:', status);
             updateControls(status);
         }
     });
@@ -37,29 +43,47 @@ function updateControls(status) {
     if (!btn) return;
 
     if (status === 'paused' || status === 'stopped') {
-        btn.textContent = '시작'; // Start
-        btn.classList.remove('btn-danger');
+        btn.textContent = '시작';
+        btn.classList.remove('btn-danger', 'btn-secondary');
         btn.classList.add('btn-primary');
     } else {
-        btn.textContent = '일시정지'; // Pause
+        btn.textContent = '일시정지';
         btn.classList.remove('btn-primary');
-        btn.classList.add('btn-danger'); // Use danger color for pause/stop visibility or just neutral
+        btn.classList.add('btn-secondary');
     }
 }
 
 function updateTimerDisplay(remainingSeconds) {
-    // Numeric Display
-    const timeDisplay = document.getElementById('timer-numbers');
-    if (timeDisplay) {
-        timeDisplay.textContent = Timer.formatTime(remainingSeconds);
+    // Determine active type for color
+    let isBreak = false;
+    if (activeTimer.activePeriodId) {
+        const periods = PeriodRepository.getPeriodsForDate(getFormattedDate(currentDate));
+        const p = periods.find(p => p.id === activeTimer.activePeriodId);
+        if (p && p.type === 'break') isBreak = true;
     }
 
-    // Circular Progress
+    // Update Text
+    const timeDisplay = document.getElementById('timer-numbers');
+    if (timeDisplay) timeDisplay.textContent = Timer.formatTime(remainingSeconds);
+
+    // Update Circle
     const circle = document.querySelector('.progress-ring__circle');
+    const timerTextH1 = document.querySelector('.timer-text h1');
+
+    if (isBreak) {
+        circle.classList.add('break-mode');
+        if (timerTextH1) timerTextH1.classList.add('break-mode-text');
+    } else {
+        circle.classList.remove('break-mode');
+        if (timerTextH1) timerTextH1.classList.remove('break-mode-text');
+    }
+
     if (circle && currentTimerDuration > 0) {
         const radius = circle.r.baseVal.value;
         const circumference = radius * 2 * Math.PI;
-        const offset = circumference - (remainingSeconds / (currentTimerDuration * 60)) * circumference;
+        // avoid divide by zero if currentTimerDuration is 0 (shouldn't happen if running)
+        const duration = currentTimerDuration || 1;
+        const offset = circumference - (remainingSeconds / (duration * 60)) * circumference;
 
         circle.style.strokeDasharray = `${circumference} ${circumference}`;
         circle.style.strokeDashoffset = offset;
@@ -77,7 +101,6 @@ function renderHeader() {
     if (!main) return;
     if (document.querySelector('.timer-section')) return;
 
-    // New Layout: Timer at Top, then Date Nav, then Schedule
     main.innerHTML = `
         <div class="timer-section">
             <div class="circular-timer-container">
@@ -93,7 +116,7 @@ function renderHeader() {
             
             <div class="timer-main-controls">
                 <button id="toggleTimerBtn" class="btn btn-primary btn-lg">시작</button>
-                <button id="resetTimerBtn" class="btn btn-secondary btn-lg">초기화</button>
+                <button id="resetTimerBtn" class="btn btn-transparent btn-lg" style="font-size: 0.9rem; color: #888;">초기화</button>
             </div>
         </div>
 
@@ -103,9 +126,7 @@ function renderHeader() {
             <button id="nextDate" class="btn btn-icon">&gt;</button>
         </div>
         
-        <div id="schedule-container" class="schedule-container">
-            <!-- Periods will be injected here -->
-        </div>
+        <div id="schedule-container" class="schedule-container"></div>
 
         <button id="addPeriodBtn" class="btn btn-primary btn-floating">+</button>
     `;
@@ -118,7 +139,10 @@ function renderHeader() {
     document.getElementById('resetTimerBtn').addEventListener('click', () => {
         if (confirm('타이머를 초기화 하시겠습니까?')) {
             activeTimer.stop();
-            updateTimerDisplay(currentTimerDuration * 60);
+            document.querySelector('.progress-ring__circle').style.strokeDashoffset = 0;
+            document.querySelector('.progress-ring__circle').classList.remove('break-mode');
+            document.getElementById('timer-numbers').textContent = '00:00';
+            document.getElementById('timer-label').textContent = '준비';
             updateControls('stopped');
         }
     });
@@ -128,15 +152,23 @@ function handleToggleTimer() {
     if (activeTimer.isRunning) {
         activeTimer.pause();
     } else {
-        // If has active period, resume. If not, maybe warn?
-        if (activeTimer.activePeriodId) {
-            const seconds = activeTimer.remainingSeconds > 0 ? activeTimer.remainingSeconds : currentTimerDuration * 60;
-            // Hacky resume for now
+        // Smart Start Logic
+        if (!activeTimer.activePeriodId || activeTimer.remainingSeconds <= 0) {
+            // Find first incomplete period
+            const periods = PeriodRepository.getPeriodsForDate(getFormattedDate(currentDate));
+            const nextPeriod = periods.find(p => !p.completed);
+
+            if (nextPeriod) {
+                const label = nextPeriod.type === 'study' ? '집중 중...' : '휴식 중...';
+                startPeriod(nextPeriod.id, nextPeriod.duration, label);
+            } else {
+                alert('모든 일정이 완료되었습니다! 새로운 세션을 추가하세요.');
+            }
+        } else {
+            // Resume
             activeTimer.intervalId = setInterval(() => activeTimer.tick(), 1000);
             activeTimer.isRunning = true;
             updateControls('running');
-        } else {
-            alert('재생할 세션을 선택해주세요.');
         }
     }
 }
@@ -163,23 +195,44 @@ async function renderSchedule(dateString) {
         return;
     }
 
-    container.innerHTML = periods.map(period => `
-        <div class="card period-card type-${period.type} ${period.completed ? 'completed' : ''}">
-            <div class="period-info">
-                <h4>${period.type === 'study' ? '집중 (Focus)' : '휴식 (Break)'}</h4>
-                <p>${period.duration}분</p>
-            </div>
-            <div class="period-actions">
-               <button class="btn btn-icon btn-start" data-id="${period.id}" data-duration="${period.duration}" data-type="${period.type}">
-                    ▶
-               </button>
-            </div>
-        </div>
-    `).join('');
+    // Grouping Logic
+    const groups = {};
+    periods.forEach(p => {
+        const gid = p.groupId || p.id; // Fallback to ID if no group
+        if (!groups[gid]) groups[gid] = [];
+        groups[gid].push(p);
+    });
 
-    // Attach start listeners
-    document.querySelectorAll('.btn-start').forEach(btn => {
+    const groupHtml = Object.values(groups).map(groupPeriods => {
+        // Assume group has [study, break] or just one
+        const study = groupPeriods.find(p => p.type === 'study');
+        const breakP = groupPeriods.find(p => p.type === 'break');
+
+        // Use the ID of the group's first element or groupId for delete
+        const groupId = groupPeriods[0].groupId;
+
+        return `
+        <div class="card period-group-card">
+            <div class="period-group-content">
+                ${study ? renderPeriodBlock(study, 'study') : ''}
+                ${breakP ? `<div class="period-divider"></div>` : ''}
+                ${breakP ? renderPeriodBlock(breakP, 'break') : ''}
+            </div>
+            ${groupId ? `
+                <button class="btn btn-icon btn-delete-group" data-group-id="${groupId}" title="그룹 삭제">
+                    🗑️
+                </button>
+            ` : ''}
+        </div>
+        `;
+    }).join('');
+
+    container.innerHTML = groupHtml;
+
+    // Attach Listeners
+    document.querySelectorAll('.btn-play-mini').forEach(btn => {
         btn.addEventListener('click', (e) => {
+            e.stopPropagation(); // prevent bubbling if needed
             const id = e.target.dataset.id;
             const duration = parseInt(e.target.dataset.duration);
             const type = e.target.dataset.type;
@@ -187,29 +240,72 @@ async function renderSchedule(dateString) {
             startPeriod(id, duration, label);
         });
     });
+
+    document.querySelectorAll('.btn-delete-group').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const gid = e.currentTarget.dataset.groupId; // Use currentTarget for button
+            if (confirm('이 세션 그룹을 삭제하시겠습니까?')) {
+                PeriodRepository.deletePeriodGroup(dateString, gid);
+                renderSchedule(dateString);
+            }
+        });
+    });
+}
+
+function renderPeriodBlock(period, type) {
+    const label = type === 'study' ? '집중' : '휴식';
+    const statusClass = period.completed ? 'status-completed' : (period.id === activeTimer?.activePeriodId ? 'status-active' : '');
+
+    return `
+        <div class="period-block ${type}-block ${statusClass}" onclick="/* Optional: trigger select */">
+            <div class="period-meta">
+                <span class="period-type-label">${label}</span>
+                <span class="period-duration-label">${period.duration}분</span>
+            </div>
+            <button class="btn btn-icon btn-play-mini" 
+                data-id="${period.id}" 
+                data-duration="${period.duration}" 
+                data-type="${period.type}">
+                ${period.completed ? '✓' : '▶'}
+            </button>
+        </div>
+    `;
 }
 
 function startPeriod(id, duration, label) {
-    activeTimer.stop();
+    if (activeTimer.intervalId) activeTimer.stop();
+
     currentTimerDuration = duration;
     document.getElementById('timer-label').textContent = label;
-    updateTimerDisplay(duration * 60); // Set initial visual
+    document.getElementById('timer-numbers').textContent = Timer.formatTime(duration * 60);
+
+    // Reset circle
+    const circle = document.querySelector('.progress-ring__circle');
+    const radius = circle.r.baseVal.value;
+    const circumference = radius * 2 * Math.PI;
+    circle.style.strokeDashoffset = 0;
+
+    // Update colors immediately based on type
+    const dateStr = getFormattedDate(currentDate);
+    const periods = PeriodRepository.getPeriodsForDate(dateStr);
+    const p = periods.find(x => x.id === id);
+    if (p && p.type === 'break') {
+        circle.classList.add('break-mode');
+        document.querySelector('.timer-text h1').classList.add('break-mode-text');
+    } else {
+        circle.classList.remove('break-mode');
+        document.querySelector('.timer-text h1').classList.remove('break-mode-text');
+    }
+
     activeTimer.start(duration, id);
     updateControls('running');
-
-    // Scroll to top to show timer
+    renderSchedule(getFormattedDate(currentDate)); // Update active status in list
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// --- Modal Logic ---
 function initModal() {
-    // Inject improved modal HTML if needed or assume index.html has it.
-    // We need to UPDATE index.html's modal structure first or inject it here.
-    // Let's inject it to be safe and cleaner.
-
     let modal = document.getElementById('addPeriodModal');
     if (!modal) {
-        // Create it
         modal = document.createElement('div');
         modal.id = 'addPeriodModal';
         modal.className = 'modal hidden';
@@ -249,17 +345,21 @@ function initModal() {
         const studyTime = parseInt(document.getElementById('studyDuration').value);
         const breakTime = parseInt(document.getElementById('breakDuration').value);
 
-        // Add Study Period
+        const groupId = crypto.randomUUID();
+
+        // Add Study
         PeriodRepository.addPeriod(getFormattedDate(currentDate), {
             id: crypto.randomUUID(),
+            groupId,
             type: 'study',
             duration: studyTime,
             completed: false
         });
 
-        // Add Break Period
+        // Add Break
         PeriodRepository.addPeriod(getFormattedDate(currentDate), {
             id: crypto.randomUUID(),
+            groupId,
             type: 'break',
             duration: breakTime,
             completed: false

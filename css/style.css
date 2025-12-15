@@ -367,3 +367,91 @@ body {
 .form-group.half {
     flex: 1;
 }
+
+/* Break Mode Colors */
+.progress-ring__circle.break-mode {
+    stroke: var(--color-success);
+}
+.break-mode-text {
+    color: var(--color-success) !important;
+}
+/* Grouped Card Styles */
+.period-group-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0; /* Let inner blocks handle padding */
+    overflow: hidden;
+}
+.period-group-content {
+    display: flex;
+    flex: 1;
+    align-items: stretch;
+}
+.period-block {
+    flex: 1;
+    padding: var(--spacing-md);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.period-block:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+.period-divider {
+    width: 1px;
+    background-color: var(--border-color);
+}
+.period-meta {
+    display: flex;
+    flex-direction: column;
+}
+.period-type-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+    font-weight: 600;
+}
+.period-duration-label {
+    font-size: 1.1rem;
+}
+.status-active .period-type-label {
+    color: var(--color-accent);
+}
+.break-block.status-active .period-type-label {
+    color: var(--color-success);
+}
+.status-completed .period-duration-label {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+.btn-delete-group {
+    padding: 0 var(--spacing-md);
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+.btn-delete-group:hover {
+    opacity: 1;
+    color: var(--color-error);
+}
+/* Mini Play Button */
+.btn-play-mini {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+}
+.btn-play-mini:hover {
+    background: var(--color-accent);
+    color: #000;
+}
+.break-block .btn-play-mini:hover {
+    background: var(--color-success);
+}
