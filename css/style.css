@@ -169,28 +169,58 @@ textarea {
 @media (max-width: 600px) {
     .date-nav-top {
         flex-wrap: wrap;
-        gap: var(--spacing-sm);
+        /* Allow wrapping */
+        justify-content: center;
+        gap: 15px;
+        /* Gap between Date Row and Stats Row */
         padding: var(--spacing-md);
     }
 
     .top-stats-divider {
         display: none;
-        /* Hide dividers on mobile if wrapping */
+        /* Hide dividers on mobile */
     }
 
-    .top-stats-item {
-        width: 45%;
-        /* 2 per row */
-        margin-top: 10px;
+    /* Row 1: Date Controls */
+    /* We want Prev - Date - Next to be on one line, taking proper space */
+    #prevDate,
+    #nextDate {
+        order: 1;
+        /* First row */
     }
 
     .date-display-large {
-        width: 100%;
-        order: -1;
-        /* Keep date on top */
-        margin-bottom: 10px;
+        order: 1;
+        /* First row */
+        min-width: unset;
+        width: auto;
+        /* Allow it to shrink/grow as needed, don't force 100% */
+        font-size: 1.5rem;
+        /* Slightly smaller date on mobile */
+        margin: 0 10px;
     }
 
+    /* Row 2: Stats */
+    .top-stats-item {
+        order: 2;
+        /* Second row */
+        width: 45%;
+        /* 2 per row side by side */
+        margin-top: 5px;
+        padding-top: 10px;
+        border-top: 1px solid var(--border-color);
+        /* Separation */
+    }
+
+    .top-stat-label {
+        font-size: 0.8rem;
+        /* Smaller label */
+    }
+
+    .top-stat-value {
+        font-size: 1.2rem;
+        /* REDUCED font size as requested (was 1.5rem) */
+    }
 }
 
 /* 2-Column Layout */
