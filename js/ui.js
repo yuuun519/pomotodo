@@ -707,70 +707,7 @@ function startPeriod(id, duration, label) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function initModal() {
-    let modal = document.getElementById('addPeriodModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'addPeriodModal';
-        modal.className = 'modal hidden';
-        document.body.appendChild(modal);
-    }
 
-    modal.innerHTML = `
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h3 style="margin-top:0">세션 추가</h3>
-            <form id="addPeriodForm">
-                <div class="form-row">
-                    <div class="form-group half">
-                        <label for="studyDuration">집중 시간 (분)</label>
-                        <input type="number" id="studyDuration" value="50" min="1" required>
-                    </div>
-                    <div class="form-group half">
-                        <label for="breakDuration">휴식 시간 (분)</label>
-                        <input type="number" id="breakDuration" value="10" min="1" required>
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-primary full-width">추가하기</button>
-            </form>
-        </div>
-    `;
-
-    const closeBtn = modal.querySelector('.close-modal');
-    const form = modal.querySelector('#addPeriodForm');
-
-    closeBtn.onclick = closeModal;
-    window.onclick = (event) => {
-        if (event.target == modal) closeModal();
-    };
-
-    form.onsubmit = (e) => {
-        e.preventDefault();
-        const studyTime = parseInt(document.getElementById('studyDuration').value);
-        const breakTime = parseInt(document.getElementById('breakDuration').value);
-
-        const groupId = crypto.randomUUID();
-
-        PeriodRepository.addPeriod(getFormattedDate(currentDate), {
-            id: crypto.randomUUID(),
-            groupId,
-            type: 'study',
-            duration: studyTime,
-            completed: false
-        });
-
-        PeriodRepository.addPeriod(getFormattedDate(currentDate), {
-            id: crypto.randomUUID(),
-            groupId,
-            type: 'break',
-            duration: breakTime,
-            completed: false
-        });
-
-        renderLayout();
-        closeModal();
-    };
-}
 
 function openModal() {
     document.getElementById('addPeriodModal').classList.remove('hidden');
