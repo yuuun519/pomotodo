@@ -91,10 +91,26 @@ textarea {
     gap: var(--spacing-xl);
 }
 
+/* Responsive Layout Updates */
+@media (max-width: 767px) {
+    .app-container {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .sidebar {
+        /* Mobile Portrait Order: Stats -> Timer */
+        display: flex;
+        flex-direction: column-reverse;
+        gap: var(--spacing-lg);
+    }
+}
+
 @media (min-width: 768px) {
     .app-container {
         display: grid;
-        grid-template-columns: 300px 1fr;
+        /* Sidebar | Content */
+        grid-template-columns: 320px 1fr;
         gap: var(--spacing-xl);
         align-items: start;
     }
@@ -102,53 +118,128 @@ textarea {
     .sidebar {
         position: sticky;
         top: var(--spacing-md);
+        /* Desktop Order: Timer -> Stats */
+        display: flex;
+        flex-direction: column;
     }
 }
 
 /* Sidebar Components */
 .sidebar {
-    display: flex;
-    flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
 }
 
+/* Specific Mobile Portrait Order Adjustment Verification 
+   Since we use column-reverse, the LAST element in HTML becomes FIRST in view.
+   HTML Order: TimerSection, StatsContainer.
+   Mobile (Rev): Stats, Timer. (Correct)
+   Desktop (Col): Timer, Stats. (Correct)
+*/
+
 .stats-container {
-    margin-top: var(--spacing-md);
     width: 100%;
 }
 
-.stat-item {
+/* Highlight Active Period */
+.active-period .period-body {
+    background-color: #252525;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 15px rgba(187, 134, 252, 0.25);
+    transition: all 0.3s ease;
+}
+
+/* Numeric Timer Mode */
+.timer-display-numeric-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 260px;
+    height: 180px;
+    /* Shorter than circular */
     margin-bottom: var(--spacing-md);
-    text-align: center;
 }
 
-.stat-label {
-    display: block;
-    font-size: 1rem;
-    color: var(--color-text-secondary);
-    margin-bottom: var(--spacing-xs);
-}
-
-.stat-value {
-    font-size: 1.5rem;
+.timer-display-numeric {
+    font-size: 5rem;
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
     color: var(--color-text-primary);
 }
 
-/* Timer Circle Overrides for Sidebar */
+.timer-display-numeric-label {
+    font-size: 1.2rem;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-sm);
+}
+
+/* Circular Timer Position Overrides */
 .circular-timer-container {
     position: relative;
     width: 260px;
     height: 260px;
     margin-bottom: var(--spacing-md);
     pointer-events: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .timer-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
     pointer-events: none;
+    display: flex;
+    flex-direction: column-reverse;
+    /* Put Label ABOVE Time? No, user said "Above the time... display label" */
+    /* wait, column-reverse puts bottom element on top visually? No. flex-direction: column; top->bottom.
+       User: "Above the time ... display current period label"
+       So: Label
+           Time
+    */
+    flex-direction: column;
 }
+
+.timer-text h1 {
+    margin: 0;
+    font-size: 3rem;
+    line-height: 1;
+}
+
+.timer-text p {
+    margin: 0;
+    margin-bottom: 5px;
+    /* Space between label and time */
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+}
+
+/* Settings Button */
+.header-actions {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+/* Settings Modal */
+#settingsModal .form-group {
+    margin-bottom: 15px;
+}
+
+#settingsModal label {
+    display: block;
+    margin-bottom: 5px;
+    color: #ccc;
+}
+
 
 .timer-main-controls .btn {
     pointer-events: auto;

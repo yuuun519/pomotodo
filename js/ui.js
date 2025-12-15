@@ -1,5 +1,5 @@
 // UI Module
-import { PeriodRepository, TodoRepository } from './store.js';
+import { PeriodRepository, TodoRepository, getState, saveState } from './store.js';
 import { Timer } from './timer.js';
 
 let currentDate = new Date();
@@ -63,18 +63,23 @@ function updateTimerDisplay(remainingSeconds) {
         if (p && p.type === 'break') isBreak = true;
     }
 
-    const timeDisplay = document.getElementById('timer-numbers');
+    const timeDisplay = document.getElementById('timer-numbers') || document.getElementById('timer-numbers-num');
     if (timeDisplay) timeDisplay.textContent = Timer.formatTime(remainingSeconds);
 
     const circle = document.querySelector('.progress-ring__circle');
-    const timerTextH1 = document.querySelector('.timer-text h1');
+    const timerTextH1 = document.querySelector('.timer-text h1'); // For circular color change
 
     if (isBreak) {
-        circle.classList.add('break-mode');
+        if (circle) circle.classList.add('break-mode');
         if (timerTextH1) timerTextH1.classList.add('break-mode-text');
+        // Numeric color?
+        const numDisplay = document.getElementById('timer-numbers-num');
+        if (numDisplay) numDisplay.style.color = 'var(--color-success)';
     } else {
-        circle.classList.remove('break-mode');
+        if (circle) circle.classList.remove('break-mode');
         if (timerTextH1) timerTextH1.classList.remove('break-mode-text');
+        const numDisplay = document.getElementById('timer-numbers-num');
+        if (numDisplay) numDisplay.style.color = 'var(--color-text-primary)';
     }
 
     if (circle && currentTimerDuration > 0) {
@@ -99,7 +104,8 @@ function renderLayout() {
     if (!main) return;
 
     main.innerHTML = `
-        <div class="header-top-actions" style="position: absolute; top: 20px; right: 20px;">
+        <div class="header-actions">
+            <button id="settingsBtn" class="btn btn-icon" title="설정">⚙️</button>
             <button id="exportBtn" class="btn btn-sm" title="이미지로 저장">📷 저장</button>
         </div>
         
@@ -112,7 +118,11 @@ function renderLayout() {
 
         <div class="app-container">
             <aside class="sidebar" id="sidebar">
-                <!-- Timer & Stats -->
+                <!-- HTML Order: Timer then Settings. 
+                   Mobile CSS will reverse this to: Stats then Timer.
+                -->
+                <div id="sidebar-timer-section"></div>
+                <div id="sidebar-stats-section" class="stats-container"></div>
             </aside>
             <main class="content" id="list-content">
                 <!-- Schedule -->
@@ -125,20 +135,148 @@ function renderLayout() {
     document.getElementById('prevDate').addEventListener('click', () => changeDate(-1));
     document.getElementById('nextDate').addEventListener('click', () => changeDate(1));
     document.getElementById('exportBtn').addEventListener('click', handleExport);
+    document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
 
     renderSidebar();
     renderScheduleList();
 }
 
-function renderSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    if (!sidebar) return;
+// ... (renderSidebar implementation below in next chunk)
 
-    // Calc Stats: Total ONLY of COMPLETED periods
+function initModal() {
+    // Add Period Modal
+    if (!document.getElementById('addPeriodModal')) {
+        const modal = document.createElement('div');
+        modal.id = 'addPeriodModal';
+        modal.className = 'modal hidden';
+        document.body.appendChild(modal);
+        // ... build modal content ...
+        // For brevity in this replace, I will call a helper or just re-inject the content properly below
+        // Actually, to keep file clean, I'll stick to the original logic pattern but ensuring SettingsModal is also init.
+    }
+
+    // Inject Add Period Modal Content
+    const addModal = document.getElementById('addPeriodModal');
+    addModal.innerHTML = `
+        <div class="modal-content">
+            <span class="close-modal" onclick="document.getElementById('addPeriodModal').classList.add('hidden')">&times;</span>
+            <h3 style="margin-top:0">세션 추가</h3>
+            <form id="addPeriodForm">
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="studyDuration">집중 시간 (분)</label>
+                        <input type="number" id="studyDuration" value="50" min="1" required>
+                    </div>
+                    <div class="form-group half">
+                        <label for="breakDuration">휴식 시간 (분)</label>
+                        <input type="number" id="breakDuration" value="10" min="1" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary full-width">추가하기</button>
+            </form>
+        </div>
+    `;
+    addModal.querySelector('#addPeriodForm').onsubmit = handleAddPeriodSubmit;
+
+    // Settings Modal
+    if (!document.getElementById('settingsModal')) {
+        const sm = document.createElement('div');
+        sm.id = 'settingsModal';
+        sm.className = 'modal hidden';
+        document.body.appendChild(sm);
+    }
+
+    const settingsModal = document.getElementById('settingsModal');
+    settingsModal.innerHTML = `
+        <div class="modal-content">
+            <span class="close-modal" onclick="document.getElementById('settingsModal').classList.add('hidden')">&times;</span>
+            <h3 style="margin-top:0">설정</h3>
+            <form id="settingsForm">
+                <div class="form-group">
+                    <label>타이머 모드</label>
+                    <div style="display: flex; gap: 10px;">
+                        <label style="color: #fff; cursor: pointer;">
+                            <input type="radio" name="timerMode" value="circular"> 원형 (Circular)
+                        </label>
+                        <label style="color: #fff; cursor: pointer;">
+                            <input type="radio" name="timerMode" value="numeric"> 숫자 (Numeric)
+                        </label>
+                    </div>
+                </div>
+                <!-- Future settings can go here -->
+                <button type="submit" class="btn btn-primary full-width">저장</button>
+            </form>
+        </div>
+    `;
+    settingsModal.querySelector('#settingsForm').onsubmit = handleSettingsSubmit;
+
+    // Global Close
+    window.onclick = (event) => {
+        if (event.target.classList.contains('modal')) {
+            event.target.classList.add('hidden');
+        }
+    };
+}
+
+function handleAddPeriodSubmit(e) {
+    e.preventDefault();
+    const studyTime = parseInt(document.getElementById('studyDuration').value);
+    const breakTime = parseInt(document.getElementById('breakDuration').value);
+    const groupId = crypto.randomUUID();
+
+    PeriodRepository.addPeriod(getFormattedDate(currentDate), {
+        id: crypto.randomUUID(),
+        groupId,
+        type: 'study',
+        duration: studyTime,
+        completed: false
+    });
+
+    PeriodRepository.addPeriod(getFormattedDate(currentDate), {
+        id: crypto.randomUUID(),
+        groupId,
+        type: 'break',
+        duration: breakTime,
+        completed: false
+    });
+
+    renderLayout();
+    document.getElementById('addPeriodModal').classList.add('hidden');
+}
+
+function openSettingsModal() {
+    const state = getState();
+    const mode = state.settings?.timerMode || 'circular';
+    const form = document.querySelector('#settingsForm');
+    form.elements['timerMode'].value = mode;
+    document.getElementById('settingsModal').classList.remove('hidden');
+}
+
+function handleSettingsSubmit(e) {
+    e.preventDefault();
+    const form = e.target;
+    const mode = form.elements['timerMode'].value;
+
+    const state = getState();
+    if (!state.settings) state.settings = {};
+    state.settings.timerMode = mode;
+    saveState(state); // This should ideally trigger re-render if reactive, but we'll force it.
+
+    renderSidebar(); // Update sidebar immediately
+    document.getElementById('settingsModal').classList.add('hidden');
+}
+
+function renderSidebar() {
+    const timerSection = document.getElementById('sidebar-timer-section');
+    const statsSection = document.getElementById('sidebar-stats-section');
+    if (!timerSection || !statsSection) return;
+
+    const state = getState();
+    const mode = state.settings?.timerMode || 'circular';
+
+    // Calc Stats
     const periods = PeriodRepository.getPeriodsForDate(getFormattedDate(currentDate));
     let totalCompletedStudyMins = periods.filter(p => p.type === 'study' && p.completed).reduce((a, b) => a + b.duration, 0);
-    // User requested "Total Study Time" - "increase only when a period is completed".
-
     const hours = Math.floor(totalCompletedStudyMins / 60);
     const mins = totalCompletedStudyMins % 60;
     const totalTimeStr = `${hours}시간 ${mins}분`;
@@ -153,53 +291,78 @@ function renderSidebar() {
     });
     const rate = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
 
-    if (!sidebar.querySelector('.circular-timer-container')) {
-        sidebar.innerHTML = `
-            <div class="timer-section">
-                <div class="circular-timer-container">
-                    <svg class="progress-ring" width="220" height="220">
-                        <circle class="progress-ring__circle-bg" stroke="var(--color-bg-input)" stroke-width="8" fill="transparent" r="100" cx="110" cy="110"/>
-                        <circle class="progress-ring__circle" stroke="var(--color-accent)" stroke-width="8" fill="transparent" r="100" cx="110" cy="110"/>
-                    </svg>
-                    <div class="timer-text">
-                        <h1 id="timer-numbers">00:00</h1>
-                        <p id="timer-label">준비</p>
-                    </div>
-                </div>
-                
-                <div class="timer-main-controls">
-                    <button id="toggleTimerBtn" class="btn btn-primary btn-lg">시작</button>
-                    <button id="resetTimerBtn" class="btn btn-transparent btn-lg" style="font-size: 0.9rem; color: #888;">초기화</button>
-                </div>
-            </div>
+    // Render Stats
+    statsSection.innerHTML = `
+        <div class="stat-item">
+            <span class="stat-label">총 학습 시간</span>
+            <span class="stat-value" id="total-focus-time">${totalTimeStr}</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">목표 달성률</span>
+            <span class="stat-value" id="goal-rate-display">${rate}%</span>
+        </div>
+    `;
 
-            <div class="stats-container">
-                <div class="stat-item">
-                    <span class="stat-label">총 학습 시간</span>
-                    <span class="stat-value" id="total-focus-time">${totalTimeStr}</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">목표 달성률</span>
-                    <span class="stat-value" id="goal-rate-display">${rate}%</span>
+    // Render Timer
+    let timerHTML = '';
+    if (mode === 'circular') {
+        timerHTML = `
+            <div class="circular-timer-container">
+                <svg class="progress-ring" width="220" height="220">
+                    <circle class="progress-ring__circle-bg" stroke="var(--color-bg-input)" stroke-width="8" fill="transparent" r="100" cx="110" cy="110"/>
+                    <circle class="progress-ring__circle" stroke="var(--color-accent)" stroke-width="8" fill="transparent" r="100" cx="110" cy="110"/>
+                </svg>
+                <div class="timer-text">
+                    <p id="timer-label">준비</p>
+                    <h1 id="timer-numbers">00:00</h1>
                 </div>
             </div>
         `;
-
-        document.getElementById('toggleTimerBtn').addEventListener('click', handleToggleTimer);
-        document.getElementById('resetTimerBtn').addEventListener('click', () => {
-            if (confirm('타이머를 초기화 하시겠습니까?')) {
-                activeTimer.stop();
-                document.querySelector('.progress-ring__circle').style.strokeDashoffset = 0;
-                document.querySelector('.progress-ring__circle').classList.remove('break-mode');
-                document.querySelector('.timer-text h1').classList.remove('break-mode-text');
-                document.getElementById('timer-numbers').textContent = '00:00';
-                document.getElementById('timer-label').textContent = '준비';
-                updateControls('stopped');
-            }
-        });
     } else {
-        document.getElementById('total-focus-time').textContent = totalTimeStr;
-        document.getElementById('goal-rate-display').textContent = `${rate}%`;
+        timerHTML = `
+            <div class="timer-display-numeric-container">
+                 <div class="timer-display-numeric-label" id="timer-label-num">준비</div>
+                 <div class="timer-display-numeric" id="timer-numbers-num">00:00</div>
+            </div>
+        `;
+    }
+
+    timerSection.innerHTML = `
+        <div class="timer-section">
+            ${timerHTML}
+            <div class="timer-main-controls" style="justify-content: center;">
+                <button id="toggleTimerBtn" class="btn btn-primary btn-lg">시작</button>
+                <button id="resetTimerBtn" class="btn btn-transparent btn-lg" style="font-size: 0.9rem; color: #888;">초기화</button>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('toggleTimerBtn').addEventListener('click', handleToggleTimer);
+    document.getElementById('resetTimerBtn').addEventListener('click', () => {
+        if (confirm('타이머를 초기화 하시겠습니까?')) {
+            activeTimer.stop();
+            // Reset Display based on mode
+            const numDisplay = document.getElementById('timer-numbers') || document.getElementById('timer-numbers-num');
+            const labelDisplay = document.getElementById('timer-label') || document.getElementById('timer-label-num');
+            if (numDisplay) numDisplay.textContent = '00:00';
+            if (labelDisplay) labelDisplay.textContent = '준비';
+
+            const circle = document.querySelector('.progress-ring__circle');
+            if (circle) circle.style.strokeDashoffset = 0;
+
+            // Remove break mode classes if any
+            if (circle) circle.classList.remove('break-mode');
+            const h1 = document.querySelector('.timer-text h1');
+            if (h1) h1.classList.remove('break-mode-text');
+
+            updateControls('stopped');
+        }
+    });
+
+    // Sync Initial State
+    if (activeTimer.isRunning || activeTimer.remainingSeconds > 0) {
+        updateTimerDisplay(activeTimer.remainingSeconds);
+        updateControls(activeTimer.isRunning ? 'running' : 'paused');
     }
 }
 
@@ -286,14 +449,19 @@ function renderGroupCards(groupList, isLastIncomplete) {
         const groupId = groupObj.gid;
         const todos = study ? (study.todos || []) : [];
 
-        // Check if this specific card should have the Inline Add Button
-        // It should be the last incomplete one.
-        // We passed only [last] with isLastIncomplete=true when calling this function
-        // But map iterates. If groupList has 1 item and flag is true, we add it.
+        // Check Highlight
+        let isActive = false;
+        if (activeTimer && activeTimer.isRunning || activeTimer.remainingSeconds > 0) {
+            if (activeTimer.activePeriodId === (study ? study.id : null) ||
+                activeTimer.activePeriodId === (breakP ? breakP.id : null)) {
+                isActive = true;
+            }
+        }
+
         const showAddSessionBtn = isLastIncomplete;
 
         return `
-        <div class="period-wrapper ${groupObj.isComplete ? 'completed-group' : ''}">
+        <div class="period-wrapper ${groupObj.isComplete ? 'completed-group' : ''} ${isActive ? 'active-period' : ''}">
              <div class="period-header">
                  <div class="period-label">
                     ${groupObj.staticIndex}교시
@@ -500,25 +668,42 @@ function startPeriod(id, duration, label) {
     if (activeTimer.intervalId) activeTimer.stop();
 
     currentTimerDuration = duration;
-    document.getElementById('timer-label').textContent = label;
-    document.getElementById('timer-numbers').textContent = Timer.formatTime(duration * 60);
+
+    const labelDisplay = document.getElementById('timer-label') || document.getElementById('timer-label-num');
+    const numDisplay = document.getElementById('timer-numbers') || document.getElementById('timer-numbers-num');
+
+    if (labelDisplay) labelDisplay.textContent = label;
+    if (numDisplay) numDisplay.textContent = Timer.formatTime(duration * 60);
 
     const circle = document.querySelector('.progress-ring__circle');
-    circle.style.strokeDashoffset = 0;
+    if (circle) circle.style.strokeDashoffset = 0;
 
     const dateStr = getFormattedDate(currentDate);
     const periods = PeriodRepository.getPeriodsForDate(dateStr);
     const p = periods.find(x => x.id === id);
     if (p && p.type === 'break') {
-        circle.classList.add('break-mode');
-        document.querySelector('.timer-text h1').classList.add('break-mode-text');
+        if (circle) circle.classList.add('break-mode');
+        const h1 = document.querySelector('.timer-text h1');
+        if (h1) h1.classList.add('break-mode-text');
+
+        if (numDisplay && !circle) numDisplay.style.color = 'var(--color-success)';
     } else {
-        circle.classList.remove('break-mode');
-        document.querySelector('.timer-text h1').classList.remove('break-mode-text');
+        if (circle) circle.classList.remove('break-mode');
+        const h1 = document.querySelector('.timer-text h1');
+        if (h1) h1.classList.remove('break-mode-text');
+
+        if (numDisplay && !circle) numDisplay.style.color = 'var(--color-text-primary)';
     }
 
     activeTimer.start(duration, id);
     updateControls('running');
+
+    // Highlight Active Period
+    renderLayout(); // Re-render to apply the .active-period class logic (which is in renderGroupCards)
+    // NOTE: Need to update renderGroupCards to check activeTimer.activePeriodId
+    // I will append a separate update for renderGroupCards.
+
+    // For smooth UX, maybe just scroll?
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 

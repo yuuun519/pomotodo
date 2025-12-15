@@ -16,7 +16,8 @@ export function initStore() {
             settings: {
                 theme: 'dark',
                 defaultStudyDuration: 25,
-                defaultBreakDuration: 5
+                defaultBreakDuration: 5,
+                timerMode: 'circular' // 'circular' | 'numeric'
             }
         };
         saveState(initialState);
