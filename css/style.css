@@ -42,6 +42,14 @@ body {
     padding: 0;
     line-height: 1.5;
     overflow-x: hidden;
+    user-select: none;
+    /* Disable text selection */
+}
+
+/* Allow selection in inputs */
+input,
+textarea {
+    user-select: text;
 }
 
 #app {
@@ -49,6 +57,22 @@ body {
     margin: 0 auto;
     padding: var(--spacing-md);
     min-height: 100vh;
+}
+
+/* Date Nav Top */
+.date-nav-top {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: var(--spacing-xl);
+    gap: var(--spacing-lg);
+}
+
+.date-display-large {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--color-text-primary);
 }
 
 /* 2-Column Layout */
@@ -62,7 +86,6 @@ body {
     .app-container {
         display: grid;
         grid-template-columns: 300px 1fr;
-        /* Fixed Sidebar, Fluid Content */
         gap: var(--spacing-xl);
         align-items: start;
     }
@@ -82,19 +105,14 @@ body {
     gap: var(--spacing-lg);
 }
 
-.date-display {
-    font-size: 1.5rem;
-    font-weight: 500;
-    margin-bottom: var(--spacing-sm);
-    letter-spacing: 0.1em;
-}
-
 .stats-container {
     margin-top: var(--spacing-md);
+    width: 100%;
 }
 
 .stat-item {
     margin-bottom: var(--spacing-md);
+    text-align: center;
 }
 
 .stat-label {
@@ -117,7 +135,6 @@ body {
     height: 260px;
     margin-bottom: var(--spacing-md);
     pointer-events: none;
-    /* Fix click interception */
 }
 
 .timer-text {
@@ -135,9 +152,10 @@ body {
     gap: var(--spacing-lg);
 }
 
-/* Period Card Structure (Wireframe) */
+/* Period Card Structure */
 .period-wrapper {
     margin-bottom: var(--spacing-lg);
+    transition: opacity 0.3s;
 }
 
 .period-header {
@@ -161,7 +179,6 @@ body {
 
 .period-body {
     background-color: var(--color-bg-card);
-    /* White/Light in light theme, Card BG in dark */
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-lg);
     padding: var(--spacing-md);
@@ -244,21 +261,38 @@ body {
     width: 100%;
     padding: var(--spacing-sm);
     background: rgba(255, 255, 255, 0.05);
-    border: none;
+    border: 1px dashed var(--border-color);
     border-radius: var(--border-radius-sm);
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s;
     color: var(--color-text-secondary);
     font-size: 1.2rem;
+    margin-top: 10px;
 }
 
 .btn-add-todo-block:hover {
     background: rgba(255, 255, 255, 0.1);
     color: var(--color-text-primary);
+    border-style: solid;
 }
 
-/* Delete Group Button - Position Absolute? Or in Header? Wireframe doesn't show it explicitly but we need it. 
-   Let's put it in the header, subtle */
+/* Inline Todo Input */
+.todo-inline-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--color-accent);
+    color: var(--color-text-primary);
+    font-size: 1rem;
+    font-family: inherit;
+    padding: 2px 0;
+}
+
+.todo-inline-input:focus {
+    outline: none;
+}
+
+/* Delete Group Text */
 .btn-delete-group-text {
     background: none;
     border: none;
@@ -274,6 +308,61 @@ body {
     text-decoration: underline;
 }
 
+/* Divider for Completed Items */
+.status-divider {
+    border: none;
+    border-top: 1px dashed #444;
+    margin: var(--spacing-xl) 0;
+    position: relative;
+    text-align: center;
+}
+
+.status-divider::after {
+    content: 'Completed';
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-bg-main);
+    padding: 0 10px;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+}
+
+/* Add Session Button (List Bottom) */
+.btn-add-session-block {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: var(--spacing-md);
+    background: rgba(187, 134, 252, 0.1);
+    border: 2px dashed var(--color-accent);
+    border-radius: var(--border-radius-lg);
+    cursor: pointer;
+    color: var(--color-accent);
+    font-size: 1.5rem;
+    transition: all 0.2s;
+    margin-bottom: var(--spacing-lg);
+}
+
+.btn-add-session-block:hover {
+    background: rgba(187, 134, 252, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Export Hidden */
+#export-container {
+    position: absolute;
+    top: 0;
+    left: -9999px;
+    width: 800px;
+    background: #121212;
+    padding: 40px;
+}
+
+/* Re-enable selection for export if needed via library options, but pointer off */
+
 /* Timer Controls & Misc */
 .progress-ring__circle,
 .progress-ring__circle-bg {
@@ -282,24 +371,20 @@ body {
     transform-origin: 50% 50%;
 }
 
-.timer-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
+.timer-main-controls {
+    display: flex;
+    gap: var(--spacing-md);
 }
 
-.timer-text h1 {
-    font-size: 3rem;
-    margin: 0;
-    color: var(--color-text-primary);
+.btn-lg {
+    padding: 10px 24px;
+    font-size: 1.1rem;
 }
 
 /* Modal */
 .modal {
     position: fixed;
-    z-index: 1000;
+    z-index: 10000;
     left: 0;
     top: 0;
     width: 100%;
@@ -309,13 +394,10 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    opacity: 1;
-    transition: opacity 0.3s ease;
 }
 
 .modal.hidden {
-    opacity: 0;
-    pointer-events: none;
+    display: none;
 }
 
 .modal-content {
@@ -336,10 +418,6 @@ body {
 .form-row {
     display: flex;
     gap: 16px;
-}
-
-.form-group {
-    margin-bottom: 16px;
 }
 
 .form-group.half {
@@ -374,60 +452,33 @@ body {
     cursor: pointer;
 }
 
-/* Floating Add Button for new Period Groups */
-.btn-floating {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    font-size: 2rem;
-    z-index: 100;
-    background: var(--color-accent);
+/* Buttons */
+.btn {
     border: none;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    font-family: inherit;
+    transition: all 0.2s ease;
 }
 
-/* Export Hidden */
-#export-container {
-    position: absolute;
-    top: 0;
-    left: -9999px;
-    width: 800px;
-    /* Fixed width for export */
-    background: #121212;
-    padding: 40px;
+.btn-icon {
+    background: none;
+    color: var(--color-text-primary);
+    font-size: 1.2rem;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: 50%;
 }
 
-/* Export specific overrides */
-#export-container .app-container {
-    display: block;
-    /* Stack or Grid? Wireframe 2 is also layout. Lets try to mimic the 2-col if possible or just list */
-    /* Wireframe 2 shows: Date top left, Stats left, List Right? 
-       Actually Wireframe 2 is simpler: Date top, Stats left, List right.
-       We can just print the whole .app-main content if configured right.
-    */
+.btn-icon:hover {
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Helper */
-.hidden {
-    display: none !important;
+.break-mode {
+    stroke: var(--color-success);
 }
-/* UI Fixes */
-.btn-add-todo-block {
-    margin-top: 10px;
-    border: 1px dashed var(--border-color);
+
+.break-mode-text {
+    color: var(--color-success) !important;
 }
-.btn-add-todo-block:hover {
-    border-style: solid;
-}
-.period-header {
-    padding-left: 2px;
-    padding-right: 2px;
-}
+/* Hide scrollbar for cleaner UI */
+body::-webkit-scrollbar { display: none; }
 

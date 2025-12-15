@@ -8,7 +8,7 @@ let currentTimerDuration = 0;
 
 export function renderApp() {
     initTimer();
-    renderLayout(); // New full layout render
+    renderLayout();
     initModal();
 }
 
@@ -24,7 +24,7 @@ function initTimer() {
             const nextPeriod = periods.find(p => !p.completed);
 
             if (nextPeriod) {
-                renderLayout(); // Re-render stats and schedule
+                renderLayout();
                 const label = nextPeriod.type === 'study' ? '집중 중...' : '휴식 중...';
                 startPeriod(nextPeriod.id, nextPeriod.duration, label);
             } else {
@@ -94,40 +94,37 @@ function getFormattedDate(date) {
     return date.toISOString().split('T')[0];
 }
 
-// Main Render Function for Wireframe Layout
 function renderLayout() {
-    const main = document.querySelector('.app-main'); // This is #app .app-main from index.html (we might need to replace app-main clss behavior or just use it as root)
+    const main = document.querySelector('.app-main');
     if (!main) return;
 
-    // We want the structure:
-    // .app-container
-    //   .sidebar
-    //   .content
+    main.innerHTML = `
+        <div class="header-top-actions" style="position: absolute; top: 20px; right: 20px;">
+            <button id="exportBtn" class="btn btn-sm" title="이미지로 저장">📷 저장</button>
+        </div>
+        
+        <!-- Date Nav Top -->
+        <div class="date-nav-top">
+            <button id="prevDate" class="btn btn-icon">&lt;</button>
+            <div class="date-display-large" id="currentDateDisplay">${currentDate.toLocaleDateString('ko-KR')}</div>
+            <button id="nextDate" class="btn btn-icon">&gt;</button>
+        </div>
 
-    // Check if structure exists, if not build it
-    let container = document.querySelector('.app-container');
-    if (!container) {
-        main.innerHTML = `
-            <div class="header-top-actions" style="position: absolute; top: 20px; right: 20px;">
-                <button id="exportBtn" class="btn btn-sm" title="이미지로 저장">📷 저장</button>
-            </div>
-            <div class="app-container">
-                <aside class="sidebar" id="sidebar">
-                    <!-- Timer & Stats -->
-                </aside>
-                <main class="content" id="list-content">
-                    <!-- Schedule -->
-                </main>
-            </div>
-            
-            <button id="addPeriodBtn" class="btn btn-floating">+</button>
-            <div id="export-container"></div>
-        `;
+        <div class="app-container">
+            <aside class="sidebar" id="sidebar">
+                <!-- Timer & Stats -->
+            </aside>
+            <main class="content" id="list-content">
+                <!-- Schedule -->
+            </main>
+        </div>
+        
+        <div id="export-container"></div>
+    `;
 
-        // Bind Fixed things
-        document.getElementById('addPeriodBtn').addEventListener('click', openModal);
-        document.getElementById('exportBtn').addEventListener('click', handleExport);
-    }
+    document.getElementById('prevDate').addEventListener('click', () => changeDate(-1));
+    document.getElementById('nextDate').addEventListener('click', () => changeDate(1));
+    document.getElementById('exportBtn').addEventListener('click', handleExport);
 
     renderSidebar();
     renderScheduleList();
@@ -137,13 +134,14 @@ function renderSidebar() {
     const sidebar = document.getElementById('sidebar');
     if (!sidebar) return;
 
-    // Calc Stats
+    // Calc Stats: Total ONLY of COMPLETED periods
     const periods = PeriodRepository.getPeriodsForDate(getFormattedDate(currentDate));
-    let totalStudyMins = periods.filter(p => p.type === 'study').reduce((a, b) => a + b.duration, 0);
-    // Format H:MM
-    const hours = Math.floor(totalStudyMins / 60);
-    const mins = totalStudyMins % 60;
-    const totalTimeStr = `${hours}시간 ${mins}분`; // "N시간 M분"
+    let totalCompletedStudyMins = periods.filter(p => p.type === 'study' && p.completed).reduce((a, b) => a + b.duration, 0);
+    // User requested "Total Study Time" - "increase only when a period is completed".
+
+    const hours = Math.floor(totalCompletedStudyMins / 60);
+    const mins = totalCompletedStudyMins % 60;
+    const totalTimeStr = `${hours}시간 ${mins}분`;
 
     let totalTodos = 0;
     let completedTodos = 0;
@@ -155,15 +153,8 @@ function renderSidebar() {
     });
     const rate = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
 
-    // Timer HTML if not exists (preserved to avoid reset tick)
     if (!sidebar.querySelector('.circular-timer-container')) {
         sidebar.innerHTML = `
-             <div class="date-nav">
-                <button id="prevDate" class="btn btn-icon">&lt;</button>
-                <div class="date-display" id="currentDateDisplay">${currentDate.toLocaleDateString('ko-KR')}</div>
-                <button id="nextDate" class="btn btn-icon">&gt;</button>
-            </div>
-
             <div class="timer-section">
                 <div class="circular-timer-container">
                     <svg class="progress-ring" width="220" height="220">
@@ -194,10 +185,6 @@ function renderSidebar() {
             </div>
         `;
 
-        // Listeners
-        document.getElementById('prevDate').addEventListener('click', () => changeDate(-1));
-        document.getElementById('nextDate').addEventListener('click', () => changeDate(1));
-
         document.getElementById('toggleTimerBtn').addEventListener('click', handleToggleTimer);
         document.getElementById('resetTimerBtn').addEventListener('click', () => {
             if (confirm('타이머를 초기화 하시겠습니까?')) {
@@ -211,10 +198,8 @@ function renderSidebar() {
             }
         });
     } else {
-        // Update Values only
         document.getElementById('total-focus-time').textContent = totalTimeStr;
         document.getElementById('goal-rate-display').textContent = `${rate}%`;
-        document.getElementById('currentDateDisplay').textContent = currentDate.toLocaleDateString('ko-KR');
     }
 }
 
@@ -224,18 +209,9 @@ function renderScheduleList() {
 
     const periods = PeriodRepository.getPeriodsForDate(getFormattedDate(currentDate));
 
-    if (periods.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <p>일정이 없습니다.</p>
-                <p class="text-secondary">+ 버튼을 눌러 집중 세션을 추가하세요.</p>
-            </div>
-        `;
-        return;
-    }
-
+    // 1. Group & Sort Logic
     const groups = {};
-    const groupOrder = [];
+    const groupOrder = []; // Logical creation order
 
     periods.forEach(p => {
         const gid = p.groupId || p.id;
@@ -246,34 +222,63 @@ function renderScheduleList() {
         groups[gid].push(p);
     });
 
-    let groupObjects = groupOrder.map((gid, index) => {
+    // Determine completion status and STATIC INDEX for each group
+    let allGroups = groupOrder.map((gid, index) => {
         const groupPeriods = groups[gid];
         const isComplete = groupPeriods.every(p => p.completed);
         return {
             gid,
             periods: groupPeriods,
             isComplete,
-            originalIndex: index + 1
+            staticIndex: index + 1 // 1-based index based on creation order
         };
     });
 
-    groupObjects.sort((a, b) => { // User requested "Completed to Bottom"? Wireframe order is usually sequential. keeping sort for "Done" items.
-        if (a.isComplete === b.isComplete) return 0;
-        return a.isComplete ? 1 : -1;
-    });
+    // 2. Split into Incomplete and Complete
+    const incompleteGroups = allGroups.filter(g => !g.isComplete);
+    const completedGroups = allGroups.filter(g => g.isComplete);
 
-    const html = groupObjects.map((groupObj, index) => {
+    // 3. Render HTML
+    let html = '';
+
+    // Render Incomplete
+    if (incompleteGroups.length > 0) {
+        html += renderGroupCards(incompleteGroups);
+    } else if (completedGroups.length === 0) {
+        // Empty State
+        html += `<div class="empty-state">
+                    <p>일정이 없습니다.</p>
+                </div>`;
+    }
+
+    // Add Session Button (Block) - Always after incomplete list
+    html += `<button id="addPeriodBlockBtn" class="btn-add-session-block">+</button>`;
+
+    // Divider & Completed
+    if (completedGroups.length > 0) {
+        html += `<div class="status-divider"></div>`;
+        html += renderGroupCards(completedGroups);
+    }
+
+    container.innerHTML = html;
+
+    // Attach Listeners
+    attachCardListeners();
+    document.getElementById('addPeriodBlockBtn').addEventListener('click', openModal);
+}
+
+function renderGroupCards(groupList) {
+    return groupList.map(groupObj => {
         const study = groupObj.periods.find(p => p.type === 'study');
         const breakP = groupObj.periods.find(p => p.type === 'break');
         const groupId = groupObj.gid;
         const todos = study ? (study.todos || []) : [];
 
-        // Wireframe Style: Header Outside, Body Inside
         return `
         <div class="period-wrapper ${groupObj.isComplete ? 'completed-group' : ''}">
              <div class="period-header">
                  <div class="period-label">
-                    ${index + 1}교시
+                    ${groupObj.staticIndex}교시
                  </div>
                  <div class="period-time-info">
                     공부 시간 : ${study ? study.duration : 0}분 <span class="divider">|</span> 쉬는 시간 : ${breakP ? breakP.duration : 0}분
@@ -282,7 +287,7 @@ function renderScheduleList() {
              </div>
              
              <div class="period-body">
-                 <ul class="todo-list">
+                 <ul class="todo-list" id="todo-list-${study ? study.id : ''}">
                     ${todos.map(todo => `
                         <li>
                             <label class="checkbox-container">
@@ -300,36 +305,21 @@ function renderScheduleList() {
                     <button class="btn-add-todo-block" data-period-id="${study.id}">
                         +
                     </button>
-                    <!-- Hidden Input for simpler interaction? Or prompt? Wireframe imply + adds item. Let's use prompt for simplicity or Toggle Input -->
+                    <!-- Container for inline input injection -->
                  ` : ''}
              </div>
         </div>
         `;
     }).join('');
+}
 
-    container.innerHTML = html;
-
-    // Attach Listeners
-    // Delete
+function attachCardListeners() {
+    // Delete Group
     document.querySelectorAll('.btn-delete-group-text').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const gid = e.currentTarget.dataset.groupId;
-            if (confirm('이 세션 그룹을 삭제하시겠습니까?')) {
+            if (confirm('삭제하시겠습니까?')) {
                 PeriodRepository.deletePeriodGroup(getFormattedDate(currentDate), gid);
-                renderLayout();
-            }
-        });
-    });
-
-    // Add Todo (+)
-    document.querySelectorAll('.btn-add-todo-block').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const pid = e.currentTarget.dataset.periodId;
-            const text = prompt('할 일을 입력하세요'); // Use prompt to match "Click + to add" simple conceptual flow, unless inline input preferred. 
-            // Inline input is better UX. Let's try to swap button with input dynamically or just prompt for now to match wireframe visual cleaness.
-            // Wireframe "Plus button" implies click -> action.
-            if (text && text.trim()) {
-                TodoRepository.addTodoToPeriod(getFormattedDate(currentDate), pid, text.trim());
                 renderLayout();
             }
         });
@@ -344,38 +334,99 @@ function renderScheduleList() {
             renderLayout();
         });
     });
+
+    // Inline Todo Creation
+    document.querySelectorAll('.btn-add-todo-block').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const pid = e.currentTarget.dataset.periodId;
+            const list = document.getElementById(`todo-list-${pid}`);
+
+            // Allow only one editing input at a time per list? Or multiple?
+            // Let's append an LI with input
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <div style="width: 20px; margin-right: 12px;"></div>
+                <input type="text" class="todo-inline-input" placeholder="Enter task..." autoFocus>
+            `;
+            list.appendChild(li);
+
+            const input = li.querySelector('input');
+            input.focus();
+
+            const save = () => {
+                if (input.value.trim()) {
+                    TodoRepository.addTodoToPeriod(getFormattedDate(currentDate), pid, input.value.trim());
+                    renderLayout();
+                } else {
+                    li.remove();
+                }
+            };
+
+            input.addEventListener('blur', save);
+            input.addEventListener('keypress', (ev) => {
+                if (ev.key === 'Enter') {
+                    input.blur(); // Trigger save via blur
+                }
+            });
+        });
+    });
 }
 
 function handleExport() {
     const container = document.getElementById('export-container');
     const dateStr = currentDate.toLocaleDateString('ko-KR');
 
-    // Build Export HTML (Simplified for image)
-    const stats = document.querySelector('.stats-container').innerHTML;
+    // Custom Export Layout
+    const totalTimeText = document.getElementById('total-focus-time').textContent;
+    const goalRateText = document.getElementById('goal-rate-display').textContent;
     const schedule = document.getElementById('list-content').innerHTML;
 
     container.innerHTML = `
-        <div style="padding: 20px; background: #121212; color: #fff;">
-            <h2 style="text-align:center; margin-bottom: 20px;">${dateStr} PomoToDo</h2>
-            <div style="display:flex; justify-content:center; margin-bottom: 30px;">
-                ${stats}
+        <div style="padding: 40px; background: #121212; color: #fff; width: 800px;">
+            <div style="font-size: 2.5rem; font-weight: bold; text-align: center; margin-bottom: 40px; letter-spacing: 0.1em;">
+                ${dateStr}
             </div>
-            <div>
+            
+            <div style="display: flex; justify-content: space-around; margin-bottom: 50px; border-bottom: 1px solid #333; padding-bottom: 30px;">
+                <div style="text-align: center;">
+                    <div style="color: #888; margin-bottom: 10px; font-size: 1.2rem;">총 학습 시간</div>
+                    <div style="font-size: 2rem; font-weight: bold;">${totalTimeText}</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="color: #888; margin-bottom: 10px; font-size: 1.2rem;">목표 달성률</div>
+                    <div style="font-size: 2rem; font-weight: bold;">${goalRateText}</div>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 40px;">
                 ${schedule}
+            </div>
+            
+            <div style="text-align: center; color: #666; font-size: 0.9rem; margin-top: 50px; border-top: 1px solid #333; padding-top: 20px;">
+                Generated by PomoToDo
             </div>
         </div>
     `;
 
+    // Hide buttons in export
+    container.querySelectorAll('button').forEach(b => b.style.display = 'none');
+    // Hide inline inputs
+    container.querySelectorAll('input').forEach(b => b.style.display = 'none');
+
     html2canvas(container, {
         backgroundColor: '#121212',
-        scale: 2
+        scale: 2,
+        useCORS: true
     }).then(canvas => {
         const link = document.createElement('a');
-        link.download = `pomotodo-export.png`;
+        link.download = `pomotodo-${getFormattedDate(currentDate)}.png`;
         link.href = canvas.toDataURL();
         link.click();
         container.innerHTML = '';
-    }).catch(err => console.error(err));
+    }).catch(err => {
+        console.error(err);
+        alert('이미지 저장 실패');
+    });
 }
 
 function handleToggleTimer() {
@@ -384,7 +435,7 @@ function handleToggleTimer() {
     } else {
         if (!activeTimer.activePeriodId || activeTimer.remainingSeconds <= 0) {
             const periods = PeriodRepository.getPeriodsForDate(getFormattedDate(currentDate));
-            const nextPeriod = periods.find(p => !p.completed); // Smart Start
+            const nextPeriod = periods.find(p => !p.completed);
 
             if (nextPeriod) {
                 const label = nextPeriod.type === 'study' ? '집중 중...' : '휴식 중...';
