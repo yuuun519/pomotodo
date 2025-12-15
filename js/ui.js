@@ -243,36 +243,54 @@ function renderScheduleList() {
 
     // Render Incomplete
     if (incompleteGroups.length > 0) {
-        html += renderGroupCards(incompleteGroups);
-    } else if (completedGroups.length === 0) {
-        // Empty State
-        html += `<div class="empty-state">
-                    <p>일정이 없습니다.</p>
-                </div>`;
-    }
+        // Render all but the last one normally
+        const head = incompleteGroups.slice(0, incompleteGroups.length - 1);
+        const last = incompleteGroups[incompleteGroups.length - 1];
 
-    // Add Session Button (Block) - Always after incomplete list
-    html += `<button id="addPeriodBlockBtn" class="btn-add-session-block">+</button>`;
+        html += renderGroupCards(head, false);
+        html += renderGroupCards([last], true); // true = append Add Button inside
+    } else {
+        // Empty State: if we have NO incomplete groups, show the block button here? 
+        // Or if all are complete, should we show it at the end of complete?
+        // User: "The “+” button for adding a session should be placed inside the last period block."
+        // If there are no incomplete periods (e.g. fresh day or all done), showing a big block button is reasonable fallback.
+        if (completedGroups.length === 0) {
+            html += `<div class="empty-state"><p>일정이 없습니다.</p></div>`;
+        }
+        html += `<button id="addPeriodBlockBtn" class="btn-add-session-block">+</button>`;
+    }
 
     // Divider & Completed
     if (completedGroups.length > 0) {
         html += `<div class="status-divider"></div>`;
-        html += renderGroupCards(completedGroups);
+        html += renderGroupCards(completedGroups, false);
     }
 
     container.innerHTML = html;
 
     // Attach Listeners
     attachCardListeners();
-    document.getElementById('addPeriodBlockBtn').addEventListener('click', openModal);
+    // For Block Button (if it exists)
+    const blockBtn = document.getElementById('addPeriodBlockBtn');
+    if (blockBtn) blockBtn.addEventListener('click', openModal);
+
+    // For Inline Button (if it exists)
+    const inlineBtn = document.getElementById('addPeriodInlineBtn');
+    if (inlineBtn) inlineBtn.addEventListener('click', openModal);
 }
 
-function renderGroupCards(groupList) {
+function renderGroupCards(groupList, isLastIncomplete) {
     return groupList.map(groupObj => {
         const study = groupObj.periods.find(p => p.type === 'study');
         const breakP = groupObj.periods.find(p => p.type === 'break');
         const groupId = groupObj.gid;
         const todos = study ? (study.todos || []) : [];
+
+        // Check if this specific card should have the Inline Add Button
+        // It should be the last incomplete one.
+        // We passed only [last] with isLastIncomplete=true when calling this function
+        // But map iterates. If groupList has 1 item and flag is true, we add it.
+        const showAddSessionBtn = isLastIncomplete;
 
         return `
         <div class="period-wrapper ${groupObj.isComplete ? 'completed-group' : ''}">
@@ -306,6 +324,10 @@ function renderGroupCards(groupList) {
                         +
                     </button>
                     <!-- Container for inline input injection -->
+                 ` : ''}
+
+                 ${showAddSessionBtn ? `
+                    <button id="addPeriodInlineBtn" class="btn-add-session-inline">+</button>
                  ` : ''}
              </div>
         </div>
@@ -341,12 +363,17 @@ function attachCardListeners() {
             const pid = e.currentTarget.dataset.periodId;
             const list = document.getElementById(`todo-list-${pid}`);
 
-            // Allow only one editing input at a time per list? Or multiple?
-            // Let's append an LI with input
+            // Remove any existing inline inputs to prevent clutter? 
+            // Or allow multiple? Let's check if one exists already.
+            if (list.querySelector('.todo-inline-input')) {
+                list.querySelector('.todo-inline-input').focus();
+                return;
+            }
+
             const li = document.createElement('li');
             li.innerHTML = `
                 <div style="width: 20px; margin-right: 12px;"></div>
-                <input type="text" class="todo-inline-input" placeholder="Enter task..." autoFocus>
+                <input type="text" class="todo-inline-input" placeholder="할 일 입력..." autocomplete="off">
             `;
             list.appendChild(li);
 
@@ -356,16 +383,26 @@ function attachCardListeners() {
             const save = () => {
                 if (input.value.trim()) {
                     TodoRepository.addTodoToPeriod(getFormattedDate(currentDate), pid, input.value.trim());
+                    // We re-render layout, which will replace the list with new data
                     renderLayout();
                 } else {
+                    // Remove if empty
                     li.remove();
                 }
             };
 
-            input.addEventListener('blur', save);
+            // Event Listeners for Input
+            // 1. Blur -> Save or Remove
+            input.addEventListener('blur', () => {
+                // specific timeout to allow click events (like hitting enter?) to process? 
+                // Actually blur is fine.
+                setTimeout(save, 100);
+            });
+
+            // 2. Enter -> Save
             input.addEventListener('keypress', (ev) => {
                 if (ev.key === 'Enter') {
-                    input.blur(); // Trigger save via blur
+                    input.blur();
                 }
             });
         });
@@ -382,19 +419,19 @@ function handleExport() {
     const schedule = document.getElementById('list-content').innerHTML;
 
     container.innerHTML = `
-        <div style="padding: 40px; background: #121212; color: #fff; width: 800px;">
+        <div style="padding: 40px; background: #121212; color: #fff; width: 800px; font-family: 'Inter', sans-serif;">
             <div style="font-size: 2.5rem; font-weight: bold; text-align: center; margin-bottom: 40px; letter-spacing: 0.1em;">
                 ${dateStr}
             </div>
             
-            <div style="display: flex; justify-content: space-around; margin-bottom: 50px; border-bottom: 1px solid #333; padding-bottom: 30px;">
+            <div class="export-stats-row" style="display: flex; justify-content: center; gap: 80px; margin-bottom: 50px; border-bottom: 1px solid #333; padding-bottom: 30px;">
                 <div style="text-align: center;">
                     <div style="color: #888; margin-bottom: 10px; font-size: 1.2rem;">총 학습 시간</div>
-                    <div style="font-size: 2rem; font-weight: bold;">${totalTimeText}</div>
+                    <div style="font-size: 2.5rem; font-weight: bold;">${totalTimeText}</div>
                 </div>
-                <div style="text-align: center;">
+                <div style="text-align: center; border-left: 1px solid #333; padding-left: 80px;">
                     <div style="color: #888; margin-bottom: 10px; font-size: 1.2rem;">목표 달성률</div>
-                    <div style="font-size: 2rem; font-weight: bold;">${goalRateText}</div>
+                    <div style="font-size: 2.5rem; font-weight: bold;">${goalRateText}</div>
                 </div>
             </div>
             
@@ -408,10 +445,13 @@ function handleExport() {
         </div>
     `;
 
-    // Hide buttons in export
-    container.querySelectorAll('button').forEach(b => b.style.display = 'none');
-    // Hide inline inputs
-    container.querySelectorAll('input').forEach(b => b.style.display = 'none');
+    // Clean up interactables for image
+    // Remove "Add Todo", "Add Session", "Delete" buttons from the cloned HTML
+    container.querySelectorAll('button').forEach(b => b.remove());
+    container.querySelectorAll('.btn-add-todo-block').forEach(b => b.remove());
+    container.querySelectorAll('.btn-add-session-inline').forEach(b => b.remove());
+    container.querySelectorAll('.btn-add-session-block').forEach(b => b.remove());
+    container.querySelectorAll('.btn-delete-group-text').forEach(b => b.remove());
 
     html2canvas(container, {
         backgroundColor: '#121212',

@@ -43,13 +43,22 @@ body {
     line-height: 1.5;
     overflow-x: hidden;
     user-select: none;
-    /* Disable text selection */
+    -webkit-user-select: none;
+    /* Safari */
+    -moz-user-select: none;
+    /* Firefox */
+    -ms-user-select: none;
+    /* IE10+/Edge */
+    -webkit-user-drag: none;
 }
 
 /* Allow selection in inputs */
 input,
 textarea {
     user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
 }
 
 #app {
@@ -329,7 +338,28 @@ textarea {
     font-size: 0.9rem;
 }
 
-/* Add Session Button (List Bottom) */
+/* Add Session Button (Inside Last Card) */
+.btn-add-session-inline {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: var(--spacing-sm);
+    background: rgba(187, 134, 252, 0.1);
+    border: 1px dashed var(--color-accent);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    color: var(--color-accent);
+    font-size: 1.2rem;
+    transition: all 0.2s;
+    margin-top: 15px;
+}
+
+.btn-add-session-inline:hover {
+    background: rgba(187, 134, 252, 0.2);
+}
+
+/* Add Session Button (Block - Empty State or Fallback) */
 .btn-add-session-block {
     display: flex;
     justify-content: center;
@@ -361,7 +391,16 @@ textarea {
     padding: 40px;
 }
 
-/* Re-enable selection for export if needed via library options, but pointer off */
+/* Export specific classes */
+.export-stats-row {
+    display: flex;
+    justify-content: center;
+    gap: 50px;
+    /* Separation */
+    margin-bottom: 50px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 30px;
+}
 
 /* Timer Controls & Misc */
 .progress-ring__circle,
@@ -479,6 +518,8 @@ textarea {
 .break-mode-text {
     color: var(--color-success) !important;
 }
-/* Hide scrollbar for cleaner UI */
-body::-webkit-scrollbar { display: none; }
 
+/* Hide scrollbar for cleaner UI */
+body::-webkit-scrollbar {
+    display: none;
+}
