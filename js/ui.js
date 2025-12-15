@@ -567,7 +567,7 @@ function renderScheduleList() {
     if (blockBtn) blockBtn.addEventListener('click', openModal);
 }
 
-function renderGroupCards(groupList, isLastIncomplete) {
+function renderGroupCards(groupList) {
     return groupList.map(groupObj => {
         const study = groupObj.periods.find(p => p.type === 'study');
         const breakP = groupObj.periods.find(p => p.type === 'break');
@@ -582,8 +582,6 @@ function renderGroupCards(groupList, isLastIncomplete) {
                 isActive = true;
             }
         }
-
-        const showAddSessionBtn = isLastIncomplete;
 
         return `
         <div class="period-wrapper ${groupObj.isComplete ? 'completed-group' : ''} ${isActive ? 'active-period' : ''}">
@@ -617,10 +615,6 @@ function renderGroupCards(groupList, isLastIncomplete) {
                         +
                     </button>
                     <!-- Container for inline input injection -->
-                 ` : ''}
-
-                 ${showAddSessionBtn ? `
-                    <button id="addPeriodInlineBtn" class="btn-add-session-inline">+</button>
                  ` : ''}
              </div>
         </div>
