@@ -487,3 +487,40 @@ body {
     color: var(--color-text-secondary);
     margin: 0 8px;
 }
+
+/* Export Container (Hidden) */
+#export-container {
+    position: absolute;
+    top: 0;
+    left: -9999px;
+    width: 600px;
+    background-color: var(--color-bg-main);
+    color: var(--color-text-primary);
+    padding: 40px;
+    border-radius: 0;
+    font-family: var(--font-family);
+}
+#export-container .card {
+    border: 1px solid #444;
+    box-shadow: none;
+    margin-bottom: 10px;
+}
+#export-container h2 {
+    color: var(--color-accent);
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Export Specifics */
+.schedule-export-list .card {
+    border-left: none; /* Simplify for image */
+    background: #222;
+}
+#exportBtn {
+    background: rgba(255,255,255,0.1);
+    color: #aaa;
+}
+#exportBtn:hover {
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+}
