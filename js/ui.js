@@ -107,8 +107,8 @@ function renderLayout() {
 
     main.innerHTML = `
         <div class="header-actions">
-            <button id="settingsBtn" class="btn btn-icon" title="설정">⚙️</button>
-            <button id="exportBtn" class="btn btn-sm" title="이미지로 저장">📷 저장</button>
+            <button id="settingsBtn" class="btn btn-icon" title="설정">환경설정</button>
+            <button id="exportBtn" class="btn btn-sm" title="이미지로 저장"> 이미지저장</button>
         </div>
         
         <!-- Date Nav Top with Stats -->
@@ -249,7 +249,7 @@ function initModal() {
                 </div>
 
                 <!-- Section 2: Fonts & Colors (2 Columns) -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+                <div class="settings-grid">
                     
                     <!-- Col 1: Fonts -->
                     <div>

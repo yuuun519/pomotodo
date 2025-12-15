@@ -684,6 +684,29 @@ textarea {
     font-size: 1.5rem;
 }
 
+/* Settings Modal Grid */
+.settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+}
+
+@media (max-width: 700px) {
+    .settings-grid {
+        grid-template-columns: 1fr;
+        /* Stack on mobile */
+        gap: 20px;
+    }
+
+    .modal-content {
+        width: 90% !important;
+        /* Force width on mobile */
+        max-height: 90vh;
+        overflow-y: auto;
+        /* Scroll if tall */
+    }
+}
+
 .form-row {
     display: flex;
     gap: 16px;
