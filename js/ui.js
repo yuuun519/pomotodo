@@ -229,75 +229,111 @@ function initModal() {
 
     const settingsModal = document.getElementById('settingsModal');
     settingsModal.innerHTML = `
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 850px; width: 95%;">
             <span class="close-modal" onclick="document.getElementById('settingsModal').classList.add('hidden')">&times;</span>
-            <h3 style="margin-top:0">설정</h3>
+            <h3 style="margin-top:0; margin-bottom: 20px; font-size: 1.5rem;">설정 (Settings)</h3>
             <form id="settingsForm">
-                <div class="form-group">
-                    <label>타이머 모드</label>
-                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                        <label style="color: #fff; cursor: pointer;">
-                            <input type="radio" name="timerMode" value="circular"> 원형 (Circular)
+                <!-- Section 1: Timer Mode (Full Width) -->
+                <div class="form-group" style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #333;">
+                    <label style="font-size: 1.1rem; color: #fff; margin-bottom: 10px;">타이머 모드</label>
+                    <div style="display: flex; gap: 20px;">
+                        <label style="color: #ccc; cursor: pointer; display: flex; align-items: center; gap: 8px; background: #2d2d2d; padding: 10px 15px; border-radius: 8px;">
+                            <input type="radio" name="timerMode" value="circular"> 
+                            <span>원형 (Circular)</span>
                         </label>
-                        <label style="color: #fff; cursor: pointer;">
-                            <input type="radio" name="timerMode" value="numeric"> 숫자 (Numeric)
+                        <label style="color: #ccc; cursor: pointer; display: flex; align-items: center; gap: 8px; background: #2d2d2d; padding: 10px 15px; border-radius: 8px;">
+                            <input type="radio" name="timerMode" value="numeric"> 
+                            <span>숫자 (Numeric)</span>
                         </label>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label style="margin-bottom:8px; display:block;">폰트 (Font)</label>
-                    <select id="fontSelect" name="fontFamily" style="width: 100%; padding: 10px; background: #333; border: 1px solid #444; color: #fff; border-radius: 4px; margin-bottom: 10px;">
-                        <option value="Inter">Inter (기본)</option>
-                        <option value="SchoolSafetyOcarina">학교안심 오카리나</option>
-                        <option value="SchoolSafeBoardMarker">학교안심 보드마카</option>
-                        <option value="NanumSquareRound">나눔스퀘어라운드</option>
-                        <option value="custom">사용자 지정 (Custom)</option>
-                    </select>
+                <!-- Section 2: Fonts & Colors (2 Columns) -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
                     
-                    <div id="customFontGroup" class="hidden" style="margin-top: 10px; padding: 10px; background: #222; border-radius: 4px;">
-                        <label style="font-size: 0.9rem; color: #aaa; margin-bottom: 5px; display:block;">Custom Font CSS (@font-face)</label>
-                        <textarea id="customFontCss" name="customFontCss" rows="6" style="width: 100%; padding: 8px; background: #333; border: 1px solid #444; color: #aaa; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="@font-face { ... }"></textarea>
-                        <p style="font-size: 0.8rem; color: #666; margin-top: 6px; line-height: 1.4;">
-                            * @font-face 코드를 입력하세요. "font-family" 이름을 자동으로 인식하여 적용합니다.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label style="margin-bottom:8px; display:block; border-top: 1px solid #333; padding-top: 15px;">색상 (Colors)</label>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div>
-                            <label style="font-size: 0.8rem; color: #aaa;">배경 (Main Bg)</label>
-                            <div style="display:flex; gap: 5px;">
-                                <input type="color" name="colBgMain" value="#121212" style="width: 100%; height: 35px; border:none; padding:0; background:none;">
+                    <!-- Col 1: Fonts -->
+                    <div>
+                        <h4 style="margin-top: 0; color: #bb86fc; margin-bottom: 15px;">폰트 설정</h4>
+                        <div class="form-group">
+                            <label style="margin-bottom:8px; display:block;">폰트 선택</label>
+                            <select id="fontSelect" name="fontFamily" style="width: 100%; padding: 10px; background: #333; border: 1px solid #444; color: #fff; border-radius: 4px; margin-bottom: 10px;">
+                                <option value="Inter">Inter (기본)</option>
+                                <option value="SchoolSafetyOcarina">학교안심 오카리나</option>
+                                <option value="SchoolSafeBoardMarker">학교안심 보드마카</option>
+                                <option value="NanumSquareRound">나눔스퀘어라운드</option>
+                                <option value="custom">사용자 지정 (Custom)</option>
+                            </select>
+                            
+                            <div id="customFontGroup" class="hidden" style="margin-top: 10px; padding: 15px; background: #222; border-radius: 8px; border: 1px solid #333;">
+                                <label style="font-size: 0.9rem; color: #aaa; margin-bottom: 5px; display:block;">Custom Font CSS (@font-face)</label>
+                                <textarea id="customFontCss" name="customFontCss" rows="8" style="width: 100%; padding: 10px; background: #333; border: 1px solid #444; color: #ccc; font-family: monospace; font-size: 0.85rem; resize: vertical;" placeholder="@font-face { ... }"></textarea>
+                                <p style="font-size: 0.8rem; color: #666; margin-top: 8px; line-height: 1.4;">
+                                    * @font-face 코드를 입력하세요.<br>
+                                    * "font-family" 이름을 자동으로 인식하여 적용합니다.
+                                </p>
                             </div>
                         </div>
-                        <div>
-                            <label style="font-size: 0.8rem; color: #aaa;">카드 배경 (Card Bg)</label>
-                            <input type="color" name="colBgCard" value="#1e1e1e" style="width: 100%; height: 35px; border:none; padding:0; background:none;">
+                    </div>
+
+                    <!-- Col 2: Colors -->
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="margin: 0; color: #03dac6;">테마 색상 설정</h4>
+                            <button type="button" id="resetColorsBtn" style="background:none; border:1px solid #444; color:#aaa; padding:5px 10px; border-radius:4px; font-size:0.8rem; cursor:pointer;">초기화</button>
                         </div>
-                        <div>
-                            <label style="font-size: 0.8rem; color: #aaa;">메인 색상 (Main)</label>
-                            <input type="color" name="colMain" value="#bb86fc" style="width: 100%; height: 35px; border:none; padding:0; background:none;">
-                        </div>
-                        <div>
-                            <label style="font-size: 0.8rem; color: #aaa;">보조 색상 (Secondary)</label>
-                            <input type="color" name="colSecondary" value="#03dac6" style="width: 100%; height: 35px; border:none; padding:0; background:none;">
-                        </div>
-                        <div>
-                            <label style="font-size: 0.8rem; color: #aaa;">텍스트 (Text 1)</label>
-                            <input type="color" name="colText1" value="#ffffff" style="width: 100%; height: 35px; border:none; padding:0; background:none;">
-                        </div>
-                        <div>
-                            <label style="font-size: 0.8rem; color: #aaa;">서브 텍스트 (Text 2)</label>
-                            <input type="color" name="colText2" value="#a0a0a0" style="width: 100%; height: 35px; border:none; padding:0; background:none;">
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <!-- Color Item Helper -->
+                            <div>
+                                <label style="font-size: 0.85rem; color: #aaa; display:block; margin-bottom: 5px;">배경 (Main Bg)</label>
+                                <div style="display:flex; align-items: center; background: #333; padding: 5px; border-radius: 4px;">
+                                    <input type="color" name="colBgMain" value="#121212" style="width: 30px; height: 30px; border:none; padding:0; background:none; cursor: pointer; margin-right: 10px;">
+                                    <span style="font-size: 0.8rem; color: #666; font-family: monospace;">Background</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label style="font-size: 0.85rem; color: #aaa; display:block; margin-bottom: 5px;">카드 배경 (Card Bg)</label>
+                                <div style="display:flex; align-items: center; background: #333; padding: 5px; border-radius: 4px;">
+                                    <input type="color" name="colBgCard" value="#1e1e1e" style="width: 30px; height: 30px; border:none; padding:0; background:none; cursor: pointer; margin-right: 10px;">
+                                    <span style="font-size: 0.8rem; color: #666; font-family: monospace;">Card</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label style="font-size: 0.85rem; color: #aaa; display:block; margin-bottom: 5px;">메인 색상 (Main)</label>
+                                <div style="display:flex; align-items: center; background: #333; padding: 5px; border-radius: 4px;">
+                                    <input type="color" name="colMain" value="#bb86fc" style="width: 30px; height: 30px; border:none; padding:0; background:none; cursor: pointer; margin-right: 10px;">
+                                    <span style="font-size: 0.8rem; color: #666; font-family: monospace;">Accent</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label style="font-size: 0.85rem; color: #aaa; display:block; margin-bottom: 5px;">보조 색상 (Secondary)</label>
+                                <div style="display:flex; align-items: center; background: #333; padding: 5px; border-radius: 4px;">
+                                    <input type="color" name="colSecondary" value="#03dac6" style="width: 30px; height: 30px; border:none; padding:0; background:none; cursor: pointer; margin-right: 10px;">
+                                    <span style="font-size: 0.8rem; color: #666; font-family: monospace;">Secondary</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label style="font-size: 0.85rem; color: #aaa; display:block; margin-bottom: 5px;">텍스트 (Text 1)</label>
+                                <div style="display:flex; align-items: center; background: #333; padding: 5px; border-radius: 4px;">
+                                    <input type="color" name="colText1" value="#ffffff" style="width: 30px; height: 30px; border:none; padding:0; background:none; cursor: pointer; margin-right: 10px;">
+                                    <span style="font-size: 0.8rem; color: #666; font-family: monospace;">Primary</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label style="font-size: 0.85rem; color: #aaa; display:block; margin-bottom: 5px;">서브 텍스트 (Text 2)</label>
+                                <div style="display:flex; align-items: center; background: #333; padding: 5px; border-radius: 4px;">
+                                    <input type="color" name="colText2" value="#a0a0a0" style="width: 30px; height: 30px; border:none; padding:0; background:none; cursor: pointer; margin-right: 10px;">
+                                    <span style="font-size: 0.8rem; color: #666; font-family: monospace;">Muted</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <button type="button" id="resetColorsBtn" style="margin-top:10px; background:none; border:1px solid #444; color:#aaa; padding:5px 10px; border-radius:4px; font-size:0.8rem; cursor:pointer; width:100%;">기본 색상으로 초기화</button>
                 </div>
 
-                <button type="submit" class="btn btn-primary full-width" style="margin-top: 10px;">저장</button>
+                <div style="margin-top: 30px; border-top: 1px solid #333; padding-top: 20px; text-align: right;">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('settingsModal').classList.add('hidden')" style="margin-right: 10px;">취소</button>
+                    <button type="submit" class="btn btn-primary" style="padding: 10px 30px;">저장 및 적용</button>
+                </div>
             </form>
         </div>
     `;
@@ -864,22 +900,31 @@ function handleExport() {
     const goalRateText = document.getElementById('top-goal-rate-display').textContent;
     const schedule = document.getElementById('list-content').innerHTML;
 
-    const computedFont = getComputedStyle(document.body).fontFamily;
+    const computedStyle = getComputedStyle(document.body);
+    const computedFont = computedStyle.fontFamily;
+
+    // Capture user custom colors
+    const colBg = computedStyle.getPropertyValue('--color-custom-bg').trim();
+    const colBgCard = computedStyle.getPropertyValue('--color-custom-bg-secondary').trim();
+    const colMain = computedStyle.getPropertyValue('--color-custom-main').trim();
+    const colSecondary = computedStyle.getPropertyValue('--color-custom-secondary').trim();
+    const colText1 = computedStyle.getPropertyValue('--color-custom-text-1').trim();
+    const colText2 = computedStyle.getPropertyValue('--color-custom-text-2').trim();
 
     container.innerHTML = `
-        <div style="padding: 40px; background: #121212; color: #fff; width: 800px; font-family: ${computedFont};">
-            <div style="font-size: 2.5rem; font-weight: bold; text-align: center; margin-bottom: 40px; letter-spacing: 0.1em;">
-                ${dateStr}
+        <div style="padding: 60px; background: ${colBg}; color: ${colText1}; width: 900px; font-family: ${computedFont}; box-sizing: border-box;">
+            <div style="font-size: 3rem; font-weight: 800; text-align: left; margin-bottom: 50px; letter-spacing: -0.02em; border-bottom: 2px solid ${colMain}; padding-bottom: 20px;">
+                ${dateStr} <span style="font-size: 1.2rem; font-weight: normal; color: ${colText2}; float: right; margin-top: 15px;">Daily Report</span>
             </div>
             
-            <div class="export-stats-row" style="display: flex; justify-content: space-between; gap: 80px; margin-bottom: 50px; border-bottom: 1px solid #333; padding-bottom: 30px;">
+            <div class="export-stats-row" style="display: flex; justify-content: space-between; margin-bottom: 60px; background: ${colBgCard}; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
                 <div style="text-align: left;">
-                    <div style="color: #888; margin-bottom: 10px; font-size: 1.2rem;">총 학습 시간</div>
-                    <div style="font-size: 2.5rem; font-weight: bold;">${totalTimeText}</div>
+                    <div style="color: ${colText2}; margin-bottom: 10px; font-size: 1.2rem; font-weight: 500;">총 학습 시간</div>
+                    <div style="font-size: 3rem; font-weight: 800; color: ${colMain};">${totalTimeText}</div>
                 </div>
                 <div style="text-align: right;">
-                    <div style="color: #888; margin-bottom: 10px; font-size: 1.2rem;">목표 달성률</div>
-                    <div style="font-size: 2.5rem; font-weight: bold;">${goalRateText}</div>
+                    <div style="color: ${colText2}; margin-bottom: 10px; font-size: 1.2rem; font-weight: 500;">목표 달성률</div>
+                    <div style="font-size: 3rem; font-weight: 800; color: ${colSecondary};">${goalRateText}</div>
                 </div>
             </div>
             
@@ -887,11 +932,43 @@ function handleExport() {
                 ${schedule}
             </div>
             
-            <div style="text-align: center; color: #666; font-size: 0.9rem; margin-top: 50px; border-top: 1px solid #333; padding-top: 20px;">
+            <div style="text-align: center; color: ${colText2}; font-size: 0.9rem; margin-top: 60px; border-top: 1px solid #333; padding-top: 20px;">
                 Generated by PomoToDo
             </div>
         </div>
     `;
+
+    // Apply colors to cloned elements individually if needed, but since we set color at container, mostly inherits.
+    // However, cards have explicit styles in CSS class. We need to overwrite them.
+    const cards = container.querySelectorAll('.period-body');
+    cards.forEach(card => {
+        card.style.backgroundColor = colBgCard;
+        card.style.borderColor = '#333'; // Keep border neutral or use colText2?
+        card.style.color = colText1;
+    });
+
+    const labels = container.querySelectorAll('.period-label');
+    labels.forEach(l => l.style.color = colText1);
+
+    const muted = container.querySelectorAll('.period-time-info, .todo-text.completed');
+    muted.forEach(m => m.style.color = colText2);
+
+    // Checkboxes
+    // Custom checkboxes are CSS pseudo-elements, hard to style inline easily without inserting a style block.
+    // But we captured the whole schedule HTML.
+    // We can inject a style block into the container to override variables locally for the image
+    const styleBlock = document.createElement('style');
+    styleBlock.innerHTML = `
+        .period-body { background-color: ${colBgCard} !important; }
+        .checkmark { border-color: ${colText2} !important; }
+        .checkbox-container:hover input~.checkmark { border-color: ${colMain} !important; }
+        .checkbox-container input:checked~.checkmark { background-color: ${colMain} !important; border-color: ${colMain} !important; }
+        .todo-text { color: ${colText1} !important; }
+        .todo-text.completed { color: ${colText2} !important; }
+        .period-label { color: ${colText1} !important; }
+        .period-time-info { color: ${colText2} !important; }
+    `;
+    container.appendChild(styleBlock);
 
     // Clean up interactables for image
     container.querySelectorAll('button').forEach(b => b.remove());
@@ -901,7 +978,7 @@ function handleExport() {
     container.querySelectorAll('.btn-delete-group-text').forEach(b => b.remove());
 
     html2canvas(container, {
-        backgroundColor: '#121212',
+        backgroundColor: colBg,
         scale: 2,
         useCORS: true
     }).then(canvas => {
