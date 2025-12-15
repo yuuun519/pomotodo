@@ -455,3 +455,15 @@ body {
 .break-block .btn-play-mini:hover {
     background: var(--color-success);
 }
+
+/* Fix: Prevent invisible click interception */
+.circular-timer-container,
+.progress-ring,
+.timer-text {
+    pointer-events: none;
+}
+
+/* Ensure buttons remain clickable if they ever overlap (though they shouldn't) */
+.timer-main-controls .btn {
+    pointer-events: auto;
+}
