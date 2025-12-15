@@ -872,18 +872,18 @@ function handleExport() {
                 ${dateStr}
             </div>
             
-            <div class="export-stats-row" style="display: flex; justify-content: center; gap: 80px; margin-bottom: 50px; border-bottom: 1px solid #333; padding-bottom: 30px;">
-                <div style="text-align: center;">
+            <div class="export-stats-row" style="display: flex; justify-content: space-between; gap: 80px; margin-bottom: 50px; border-bottom: 1px solid #333; padding-bottom: 30px;">
+                <div style="text-align: left;">
                     <div style="color: #888; margin-bottom: 10px; font-size: 1.2rem;">총 학습 시간</div>
                     <div style="font-size: 2.5rem; font-weight: bold;">${totalTimeText}</div>
                 </div>
-                <div style="text-align: center; border-left: 1px solid #333; padding-left: 80px;">
+                <div style="text-align: right;">
                     <div style="color: #888; margin-bottom: 10px; font-size: 1.2rem;">목표 달성률</div>
                     <div style="font-size: 2.5rem; font-weight: bold;">${goalRateText}</div>
                 </div>
             </div>
             
-            <div style="margin-bottom: 40px;">
+            <div style="margin: 0 auto 40px auto; text-align: left; max-width: 100%;">
                 ${schedule}
             </div>
             
@@ -894,7 +894,6 @@ function handleExport() {
     `;
 
     // Clean up interactables for image
-    // Remove "Add Todo", "Add Session", "Delete" buttons from the cloned HTML
     container.querySelectorAll('button').forEach(b => b.remove());
     container.querySelectorAll('.btn-add-todo-block').forEach(b => b.remove());
     container.querySelectorAll('.btn-add-session-inline').forEach(b => b.remove());
