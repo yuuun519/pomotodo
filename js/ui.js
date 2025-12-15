@@ -542,22 +542,15 @@ function renderScheduleList() {
 
     // Render Incomplete
     if (incompleteGroups.length > 0) {
-        // Render all but the last one normally
-        const head = incompleteGroups.slice(0, incompleteGroups.length - 1);
-        const last = incompleteGroups[incompleteGroups.length - 1];
+        html += renderGroupCards(incompleteGroups, false);
+    } // If no incomplete groups, we still want the button, handled below implicitly or explicitly
 
-        html += renderGroupCards(head, false);
-        html += renderGroupCards([last], true); // true = append Add Button inside
-    } else {
-        // Empty State: if we have NO incomplete groups, show the block button here? 
-        // Or if all are complete, should we show it at the end of complete?
-        // User: "The “+” button for adding a session should be placed inside the last period block."
-        // If there are no incomplete periods (e.g. fresh day or all done), showing a big block button is reasonable fallback.
-        if (completedGroups.length === 0) {
-            html += `<div class="empty-state"><p>일정이 없습니다.</p></div>`;
-        }
-        html += `<button id="addPeriodBlockBtn" class="btn-add-session-block">+</button>`;
+    // Always show the Add Session Block Button after incomplete groups (or if empty)
+    if (incompleteGroups.length === 0 && completedGroups.length === 0) {
+        html += `<div class="empty-state"><p>일정이 없습니다.</p></div>`;
     }
+
+    html += `<button id="addPeriodBlockBtn" class="btn-add-session-block" style="margin-top: 20px;">+</button>`;
 
     // Divider & Completed
     if (completedGroups.length > 0) {
@@ -572,10 +565,6 @@ function renderScheduleList() {
     // For Block Button (if it exists)
     const blockBtn = document.getElementById('addPeriodBlockBtn');
     if (blockBtn) blockBtn.addEventListener('click', openModal);
-
-    // For Inline Button (if it exists)
-    const inlineBtn = document.getElementById('addPeriodInlineBtn');
-    if (inlineBtn) inlineBtn.addEventListener('click', openModal);
 }
 
 function renderGroupCards(groupList, isLastIncomplete) {
