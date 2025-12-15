@@ -266,6 +266,7 @@ function handleSettingsSubmit(e) {
     document.getElementById('settingsModal').classList.add('hidden');
 }
 
+
 function renderSidebar() {
     const timerSection = document.getElementById('sidebar-timer-section');
     const statsSection = document.getElementById('sidebar-stats-section');
@@ -303,26 +304,52 @@ function renderSidebar() {
         </div>
     `;
 
+    // Determine Initial Timer State
+    const currentInfo = getCurrentPeriodInfo();
+    let initialLabel = '준비';
+    let initialTime = '00:00';
+    let isBreakInitial = false;
+
+    if (currentInfo) {
+        if (currentInfo.type === 'done') {
+            initialLabel = '완료';
+            initialTime = '00:00';
+        } else {
+            initialLabel = currentInfo.label;
+            initialTime = Timer.formatTime(currentInfo.duration * 60);
+            if (currentInfo.type === 'break') isBreakInitial = true;
+            // Only update global duration if not currently running/active to avoid overriding?
+            // Actually, if activeTimer is running, we sync at end. If not, this is correct.
+            if (!activeTimer.isRunning && activeTimer.remainingSeconds <= 0) {
+                currentTimerDuration = currentInfo.duration;
+            }
+        }
+    }
+
     // Render Timer
     let timerHTML = '';
     if (mode === 'circular') {
+        const breakClass = isBreakInitial ? 'break-mode-text' : '';
+        const circleClass = isBreakInitial ? 'break-mode' : '';
+
         timerHTML = `
             <div class="circular-timer-container">
                 <svg class="progress-ring" width="220" height="220">
                     <circle class="progress-ring__circle-bg" stroke="var(--color-bg-input)" stroke-width="8" fill="transparent" r="100" cx="110" cy="110"/>
-                    <circle class="progress-ring__circle" stroke="var(--color-accent)" stroke-width="8" fill="transparent" r="100" cx="110" cy="110"/>
+                    <circle class="progress-ring__circle ${circleClass}" stroke="var(--color-accent)" stroke-width="8" fill="transparent" r="100" cx="110" cy="110"/>
                 </svg>
                 <div class="timer-text">
-                    <p id="timer-label">준비</p>
-                    <h1 id="timer-numbers">00:00</h1>
+                    <p id="timer-label">${initialLabel}</p>
+                    <h1 id="timer-numbers" class="${breakClass}">${initialTime}</h1>
                 </div>
             </div>
         `;
     } else {
+        const colorStyle = isBreakInitial ? 'color: var(--color-success);' : '';
         timerHTML = `
             <div class="timer-display-numeric-container">
-                 <div class="timer-display-numeric-label" id="timer-label-num">준비</div>
-                 <div class="timer-display-numeric" id="timer-numbers-num">00:00</div>
+                 <div class="timer-display-numeric-label" id="timer-label-num">${initialLabel}</div>
+                 <div class="timer-display-numeric" id="timer-numbers-num" style="${colorStyle}">${initialTime}</div>
             </div>
         `;
     }
@@ -341,25 +368,51 @@ function renderSidebar() {
     document.getElementById('resetTimerBtn').addEventListener('click', () => {
         if (confirm('타이머를 초기화 하시겠습니까?')) {
             activeTimer.stop();
+
+            // Allow recalculation
+            const resetInfo = getCurrentPeriodInfo();
+            let rLabel = '준비';
+            let rTime = '00:00';
+            let rIsBreak = false;
+
+            if (resetInfo) {
+                if (resetInfo.type === 'done') {
+                    rLabel = '완료';
+                } else {
+                    rLabel = resetInfo.label;
+                    rTime = Timer.formatTime(resetInfo.duration * 60);
+                    currentTimerDuration = resetInfo.duration;
+                    if (resetInfo.type === 'break') rIsBreak = true;
+                }
+            }
+
             // Reset Display based on mode
             const numDisplay = document.getElementById('timer-numbers') || document.getElementById('timer-numbers-num');
             const labelDisplay = document.getElementById('timer-label') || document.getElementById('timer-label-num');
-            if (numDisplay) numDisplay.textContent = '00:00';
-            if (labelDisplay) labelDisplay.textContent = '준비';
+            if (numDisplay) numDisplay.textContent = rTime;
+            if (labelDisplay) labelDisplay.textContent = rLabel;
 
             const circle = document.querySelector('.progress-ring__circle');
             if (circle) circle.style.strokeDashoffset = 0;
 
-            // Remove break mode classes if any
-            if (circle) circle.classList.remove('break-mode');
+            // Reset classes
             const h1 = document.querySelector('.timer-text h1');
-            if (h1) h1.classList.remove('break-mode-text');
+
+            if (rIsBreak) {
+                if (circle) circle.classList.add('break-mode');
+                if (h1) h1.classList.add('break-mode-text');
+                if (numDisplay && !circle) numDisplay.style.color = 'var(--color-success)';
+            } else {
+                if (circle) circle.classList.remove('break-mode');
+                if (h1) h1.classList.remove('break-mode-text');
+                if (numDisplay && !circle) numDisplay.style.color = 'var(--color-text-primary)';
+            }
 
             updateControls('stopped');
         }
     });
 
-    // Sync Initial State
+    // Sync Initial State (if actively running or paused mid-way)
     if (activeTimer.isRunning || activeTimer.remainingSeconds > 0) {
         updateTimerDisplay(activeTimer.remainingSeconds);
         updateControls(activeTimer.isRunning ? 'running' : 'paused');
@@ -709,10 +762,42 @@ function startPeriod(id, duration, label) {
 
 
 
-function openModal() {
-    document.getElementById('addPeriodModal').classList.remove('hidden');
+
+function getCurrentPeriodInfo() {
+    const periods = PeriodRepository.getPeriodsForDate(getFormattedDate(currentDate));
+    if (!periods || periods.length === 0) return null;
+
+    const groups = {};
+    const groupOrder = [];
+    periods.forEach(p => {
+        const gid = p.groupId || p.id;
+        if (!groups[gid]) {
+            groups[gid] = [];
+            groupOrder.push(gid);
+        }
+        groups[gid].push(p);
+    });
+
+    for (let i = 0; i < groupOrder.length; i++) {
+        const gid = groupOrder[i];
+        const groupPeriods = groups[gid];
+        const incompletePeriod = groupPeriods.find(p => !p.completed);
+
+        if (incompletePeriod) {
+            const index = i + 1;
+            const typeLabel = incompletePeriod.type === 'study' ? '집중' : '휴식';
+            return {
+                label: `${index}교시 ${typeLabel}`,
+                duration: incompletePeriod.duration,
+                type: incompletePeriod.type,
+                id: incompletePeriod.id
+            };
+        }
+    }
+
+    return { label: '모든 일정 완료', duration: 0, type: 'done', id: null };
 }
 
-function closeModal() {
-    document.getElementById('addPeriodModal').classList.add('hidden');
+function openModal() {
+    document.getElementById('addPeriodModal').classList.remove('hidden');
 }
