@@ -305,6 +305,10 @@ function handleAddPeriodSubmit(e) {
     e.preventDefault();
     const studyTime = parseInt(document.getElementById('studyDuration').value);
     const breakTime = parseInt(document.getElementById('breakDuration').value);
+
+    if (studyTime) localStorage.setItem('lastStudyDuration', studyTime);
+    if (breakTime) localStorage.setItem('lastBreakDuration', breakTime);
+
     const groupId = crypto.randomUUID();
 
     PeriodRepository.addPeriod(getFormattedDate(currentDate), {
@@ -865,5 +869,15 @@ function getCurrentPeriodInfo() {
 }
 
 function openModal() {
+    const studyInput = document.getElementById('studyDuration');
+    const breakInput = document.getElementById('breakDuration');
+
+    const lastStudy = localStorage.getItem('lastStudyDuration');
+    const lastBreak = localStorage.getItem('lastBreakDuration');
+
+    // Default to blank if not set, otherwise load last value
+    studyInput.value = lastStudy ? lastStudy : '';
+    breakInput.value = lastBreak ? lastBreak : '';
+
     document.getElementById('addPeriodModal').classList.remove('hidden');
 }
