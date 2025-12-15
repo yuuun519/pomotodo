@@ -41,140 +41,262 @@ body {
     margin: 0;
     padding: 0;
     line-height: 1.5;
+    overflow-x: hidden;
 }
 
 #app {
-    max-width: 600px;
-    /* Mobile Friendly Max Width */
+    max-width: 1200px;
     margin: 0 auto;
     padding: var(--spacing-md);
-    position: relative;
     min-height: 100vh;
 }
 
-.app-header {
-    text-align: center;
-    margin-bottom: var(--spacing-lg);
+/* 2-Column Layout */
+.app-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
 }
 
-.app-header h1 {
+@media (min-width: 768px) {
+    .app-container {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        /* Fixed Sidebar, Fluid Content */
+        gap: var(--spacing-xl);
+        align-items: start;
+    }
+
+    .sidebar {
+        position: sticky;
+        top: var(--spacing-md);
+    }
+}
+
+/* Sidebar Components */
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--spacing-lg);
+}
+
+.date-display {
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin-bottom: var(--spacing-sm);
+    letter-spacing: 0.1em;
+}
+
+.stats-container {
+    margin-top: var(--spacing-md);
+}
+
+.stat-item {
+    margin-bottom: var(--spacing-md);
+}
+
+.stat-label {
+    display: block;
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.stat-value {
     font-size: 1.5rem;
     font-weight: 700;
-    letter-spacing: 0.05em;
-    color: var(--color-accent);
-}
-
-/* Date Navigation */
-.date-nav {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--spacing-lg);
-    background-color: var(--color-bg-card);
-    padding: var(--spacing-sm) var(--spacing-md);
-    border-radius: 50px;
-    /* Pill shape */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-}
-
-.date-nav h2 {
-    font-size: 1.1rem;
-    font-weight: 500;
-    margin: 0;
-}
-
-/* Cards */
-.card {
-    background-color: var(--color-bg-card);
-    border-radius: var(--border-radius-md);
-    padding: var(--spacing-md);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    margin-bottom: var(--spacing-md);
-    border: 1px solid #333;
-}
-
-.period-card {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.type-study {
-    border-left: 4px solid var(--color-accent);
-}
-
-.type-break {
-    border-left: 4px solid var(--color-success);
-}
-
-.period-time {
-    color: var(--color-text-secondary);
-    font-size: 0.9rem;
-}
-
-.period-info h4 {
-    margin: 0;
-    font-size: 1rem;
-}
-
-.period-info p {
-    margin: 0;
-    font-size: 0.8rem;
-    color: var(--color-text-muted);
-}
-
-/* Empty State */
-.empty-state {
-    text-align: center;
-    padding: var(--spacing-xl);
-    color: var(--color-text-muted);
-}
-
-/* Buttons */
-.btn {
-    border: none;
-    cursor: pointer;
-    font-family: inherit;
-    transition: all 0.2s ease;
-}
-
-.btn-icon {
-    background: none;
     color: var(--color-text-primary);
+}
+
+/* Timer Circle Overrides for Sidebar */
+.circular-timer-container {
+    position: relative;
+    width: 260px;
+    height: 260px;
+    margin-bottom: var(--spacing-md);
+    pointer-events: none;
+    /* Fix click interception */
+}
+
+.timer-text {
+    pointer-events: none;
+}
+
+.timer-main-controls .btn {
+    pointer-events: auto;
+}
+
+/* Main Content */
+.content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+/* Period Card Structure (Wireframe) */
+.period-wrapper {
+    margin-bottom: var(--spacing-lg);
+}
+
+.period-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: var(--spacing-sm);
+    padding: 0 var(--spacing-xs);
+}
+
+.period-label {
     font-size: 1.2rem;
-    padding: var(--spacing-xs) var(--spacing-sm);
-    border-radius: 50%;
-}
-
-.btn-icon:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.btn-primary {
-    background-color: var(--color-accent);
-    color: #121212;
     font-weight: 600;
+    color: var(--color-text-primary);
 }
 
-.btn-primary:hover {
-    background-color: var(--color-accent-hover);
-    transform: translateY(-1px);
+.period-time-info {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
 }
 
-.btn-floating {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    font-size: 2rem;
+.period-body {
+    background-color: var(--color-bg-card);
+    /* White/Light in light theme, Card BG in dark */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-md);
+    position: relative;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Todo List Inside Card */
+.todo-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 var(--spacing-md) 0;
+}
+
+.todo-list li {
+    margin-bottom: 8px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
 }
-/* Modal Styles */
+
+/* Custom Checkbox */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 1rem;
+    user-select: none;
+    width: 100%;
+}
+
+.checkbox-container input {
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.checkmark {
+    height: 20px;
+    width: 20px;
+    background-color: transparent;
+    border: 2px solid var(--color-text-secondary);
+    border-radius: 4px;
+    margin-right: 12px;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.checkbox-container:hover input~.checkmark {
+    border-color: var(--color-accent);
+}
+
+.checkbox-container input:checked~.checkmark {
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+}
+
+.checkbox-container input:checked~.checkmark:after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 5px;
+    height: 10px;
+    border: solid black;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.todo-text.completed {
+    text-decoration: line-through;
+    color: var(--color-text-muted);
+}
+
+/* Add Todo Button (+) Inside Card */
+.btn-add-todo-block {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: var(--spacing-sm);
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: background 0.2s;
+    color: var(--color-text-secondary);
+    font-size: 1.2rem;
+}
+
+.btn-add-todo-block:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--color-text-primary);
+}
+
+/* Delete Group Button - Position Absolute? Or in Header? Wireframe doesn't show it explicitly but we need it. 
+   Let's put it in the header, subtle */
+.btn-delete-group-text {
+    background: none;
+    border: none;
+    color: var(--color-error);
+    opacity: 0.5;
+    cursor: pointer;
+    font-size: 0.8rem;
+    margin-left: 10px;
+}
+
+.btn-delete-group-text:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+/* Timer Controls & Misc */
+.progress-ring__circle,
+.progress-ring__circle-bg {
+    transition: stroke-dashoffset 0.35s;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+}
+
+.timer-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.timer-text h1 {
+    font-size: 3rem;
+    margin: 0;
+    color: var(--color-text-primary);
+}
+
+/* Modal */
 .modal {
     position: fixed;
     z-index: 1000;
@@ -190,429 +312,122 @@ body {
     opacity: 1;
     transition: opacity 0.3s ease;
 }
+
 .modal.hidden {
     opacity: 0;
     pointer-events: none;
 }
+
 .modal-content {
     background-color: var(--color-bg-card);
     padding: var(--spacing-lg);
     border-radius: var(--border-radius-lg);
     width: 90%;
     max-width: 400px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
     border: 1px solid var(--border-color);
-    position: relative;
-    transform: translateY(0);
-    transition: transform 0.3s ease;
 }
-.modal.hidden .modal-content {
-    transform: translateY(20px);
-}
+
 .close-modal {
-    color: var(--color-text-secondary);
     float: right;
-    font-size: 28px;
-    font-weight: bold;
     cursor: pointer;
-    line-height: 20px;
-}
-.close-modal:hover {
-    color: var(--color-text-primary);
-}
-/* Form */
-.form-group {
-    margin-bottom: var(--spacing-md);
-    text-align: left;
-}
-.form-group label {
-    display: block;
-    margin-bottom: var(--spacing-xs);
-    color: var(--color-text-secondary);
-    font-size: 0.9rem;
-}
-.form-group input,
-.form-group select {
-    width: 100%;
-    padding: var(--spacing-sm);
-    background-color: var(--color-bg-input);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-sm);
-    color: var(--color-text-primary);
-    font-family: inherit;
-    font-size: 1rem;
-}
-.form-group input:focus,
-.form-group select:focus {
-    outline: none;
-    border-color: var(--color-accent);
-}
-.full-width {
-    width: 100%;
-    margin-top: var(--spacing-md);
-}
-
-/* Timer Bar */
-.timer-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background-color: var(--color-bg-card);
-    border-top: 2px solid var(--color-accent);
-    padding: var(--spacing-md);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 -4px 10px rgba(0,0,0,0.5);
-    z-index: 100;
-}
-.timer-bar.hidden {
-    display: none;
-}
-.timer-info {
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: var(--color-text-primary);
-}
-.timer-info span:first-child {
-    margin-right: var(--spacing-md);
-    color: var(--color-accent);
-    font-size: 1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-.btn-sm {
-    padding: 4px 12px;
-    font-size: 0.9rem;
-    margin-left: 8px;
-    border-radius: 4px;
-    background-color: #333;
-    color: #fff;
-}
-.btn-danger {
-    background-color: var(--color-error);
-}
-.period-actions {
-    margin-left: var(--spacing-md);
-}
-.period-card.completed {
-    opacity: 0.5;
-    border-color: var(--color-success);
-}
-.btn-start {
-    color: var(--color-accent);
     font-size: 1.5rem;
-    background: rgba(187, 134, 252, 0.1);
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.btn-start:hover {
-    background: rgba(187, 134, 252, 0.3);
-    transform: scale(1.1);
 }
 
-/* Circular Timer */
-.timer-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: var(--spacing-xl);
-    padding-top: var(--spacing-lg);
-}
-.circular-timer-container {
-    position: relative;
-    width: 220px;
-    height: 220px;
-    margin-bottom: var(--spacing-md);
-}
-.progress-ring__circle, .progress-ring__circle-bg {
-    transition: stroke-dashoffset 0.35s;
-    transform: rotate(-90deg);
-    transform-origin: 50% 50%;
-}
-.timer-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-}
-.timer-text h1 {
-    font-size: 2.5rem;
-    margin: 0;
-    color: var(--color-text-primary);
-}
-.timer-text p {
-    margin: 0;
-    color: var(--color-text-secondary);
-    font-size: 1rem;
-}
-.timer-main-controls {
-    display: flex;
-    gap: var(--spacing-md);
-}
-.btn-lg {
-    padding: 10px 24px;
-    font-size: 1.1rem;
-}
-/* Form Row for split inputs */
 .form-row {
     display: flex;
-    gap: var(--spacing-md);
+    gap: 16px;
 }
+
+.form-group {
+    margin-bottom: 16px;
+}
+
 .form-group.half {
     flex: 1;
 }
 
-/* Break Mode Colors */
-.progress-ring__circle.break-mode {
-    stroke: var(--color-success);
+.form-group label {
+    display: block;
+    margin-bottom: 4px;
+    color: #888;
 }
-.break-mode-text {
-    color: var(--color-success) !important;
+
+.form-group input {
+    width: 100%;
+    padding: 8px;
+    background: #333;
+    border: 1px solid #444;
+    color: #fff;
 }
-/* Grouped Card Styles */
-.period-group-card {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0; /* Let inner blocks handle padding */
-    overflow: hidden;
+
+.btn.full-width {
+    width: 100%;
 }
-.period-group-content {
-    display: flex;
-    flex: 1;
-    align-items: stretch;
-}
-.period-block {
-    flex: 1;
-    padding: var(--spacing-md);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+
+.btn-primary {
+    background: var(--color-accent);
+    color: #000;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
     cursor: pointer;
-    transition: background-color 0.2s;
 }
-.period-block:hover {
-    background-color: rgba(255, 255, 255, 0.03);
-}
-.period-divider {
-    width: 1px;
-    background-color: var(--border-color);
-}
-.period-meta {
-    display: flex;
-    flex-direction: column;
-}
-.period-type-label {
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    color: var(--color-text-secondary);
-    font-weight: 600;
-}
-.period-duration-label {
-    font-size: 1.1rem;
-}
-.status-active .period-type-label {
-    color: var(--color-accent);
-}
-.break-block.status-active .period-type-label {
-    color: var(--color-success);
-}
-.status-completed .period-duration-label {
-    text-decoration: line-through;
-    opacity: 0.7;
-}
-.btn-delete-group {
-    padding: 0 var(--spacing-md);
-    opacity: 0.5;
-    transition: opacity 0.2s;
-}
-.btn-delete-group:hover {
-    opacity: 1;
-    color: var(--color-error);
-}
-/* Mini Play Button */
-.btn-play-mini {
-    width: 32px;
-    height: 32px;
+
+/* Floating Add Button for new Period Groups */
+.btn-floating {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.05);
+    font-size: 2rem;
+    z-index: 100;
+    background: var(--color-accent);
+    border: none;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.8rem;
-    color: var(--color-text-secondary);
-}
-.btn-play-mini:hover {
-    background: var(--color-accent);
-    color: #000;
-}
-.break-block .btn-play-mini:hover {
-    background: var(--color-success);
 }
 
-/* Fix: Prevent invisible click interception */
-.circular-timer-container,
-.progress-ring,
-.timer-text {
-    pointer-events: none;
-}
-
-/* Ensure buttons remain clickable if they ever overlap (though they shouldn't) */
-.timer-main-controls .btn {
-    pointer-events: auto;
-}
-
-/* Clean Card Styles */
-.period-group-card.completed-group {
-    opacity: 0.4;
-    order: 100; /* Flex order if we used flex column, but we sort in JS */
-}
-.period-group-header {
-    padding-right: var(--spacing-sm);
-    font-weight: bold;
-    color: var(--color-accent);
-    min-width: 80px;
-}
-.period-info-text {
-    color: var(--color-text-primary);
-    font-size: 1rem;
-}
-.divider {
-    color: var(--color-text-secondary);
-    margin: 0 8px;
-}
-
-/* Export Container (Hidden) */
+/* Export Hidden */
 #export-container {
     position: absolute;
     top: 0;
     left: -9999px;
-    width: 600px;
-    background-color: var(--color-bg-main);
-    color: var(--color-text-primary);
+    width: 800px;
+    /* Fixed width for export */
+    background: #121212;
     padding: 40px;
-    border-radius: 0;
-    font-family: var(--font-family);
-}
-#export-container .card {
-    border: 1px solid #444;
-    box-shadow: none;
-    margin-bottom: 10px;
-}
-#export-container h2 {
-    color: var(--color-accent);
-    text-align: center;
-    margin-bottom: 20px;
 }
 
-/* Export Specifics */
-.schedule-export-list .card {
-    border-left: none; /* Simplify for image */
-    background: #222;
-}
-#exportBtn {
-    background: rgba(255,255,255,0.1);
-    color: #aaa;
-}
-#exportBtn:hover {
-    background: rgba(255,255,255,0.2);
-    color: #fff;
+/* Export specific overrides */
+#export-container .app-container {
+    display: block;
+    /* Stack or Grid? Wireframe 2 is also layout. Lets try to mimic the 2-col if possible or just list */
+    /* Wireframe 2 shows: Date top left, Stats left, List Right? 
+       Actually Wireframe 2 is simpler: Date top, Stats left, List right.
+       We can just print the whole .app-main content if configured right.
+    */
 }
 
-/* Feature: Todo List */
-.todo-section {
-    margin-top: var(--spacing-sm);
-    width: 100%;
+/* Helper */
+.hidden {
+    display: none !important;
 }
-.todo-list {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 var(--spacing-sm) 0;
+/* UI Fixes */
+.btn-add-todo-block {
+    margin-top: 10px;
+    border: 1px dashed var(--border-color);
 }
-.todo-list li {
-    margin-bottom: 4px;
+.btn-add-todo-block:hover {
+    border-style: solid;
 }
-.todo-input {
-    width: 100%;
-    background: rgba(0,0,0,0.2);
-    border: none;
-    border-bottom: 1px solid var(--border-color);
-    color: var(--color-text-secondary);
-    padding: 4px 0;
-    font-size: 0.9rem;
+.period-header {
+    padding-left: 2px;
+    padding-right: 2px;
 }
-.todo-input:focus {
-    outline: none;
-    border-color: var(--color-accent);
-    color: var(--color-text-primary);
-}
-/* Custom Checkbox */
-.checkbox-container {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    font-size: 0.9rem;
-    user-select: none;
-}
-.checkbox-container input {
-    opacity: 0;
-    cursor: pointer;
-    height: 0;
-    width: 0;
-}
-.checkmark {
-    height: 16px;
-    width: 16px;
-    background-color: transparent;
-    border: 1px solid var(--color-text-secondary);
-    border-radius: 3px;
-    margin-right: 8px;
-    position: relative;
-}
-.checkbox-container:hover input ~ .checkmark {
-    background-color: rgba(255,255,255,0.1);
-}
-.checkbox-container input:checked ~ .checkmark {
-    background-color: var(--color-accent);
-    border-color: var(--color-accent);
-}
-.checkbox-container input:checked ~ .checkmark:after {
-    content: '';
-    position: absolute;
-    left: 4px;
-    top: 1px;
-    width: 4px;
-    height: 8px;
-    border: solid black;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-}
-.todo-text.completed {
-    text-decoration: line-through;
-    color: var(--color-text-muted);
-}
-/* Goal Stats */
-.goal-rate {
-    color: var(--color-text-secondary);
-    font-size: 0.9rem;
-    margin-top: 5px;
-    letter-spacing: 0.5px;
-}
-.period-group-content {
-    flex-direction: column;
-    align-items: flex-start;
-}
-.period-info-row {
-    margin-bottom: 8px;
-}
-.info-label {
-    color: var(--color-text-muted);
-    font-size: 0.8rem;
-    margin-right: 2px;
-}
+

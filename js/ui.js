@@ -8,8 +8,7 @@ let currentTimerDuration = 0;
 
 export function renderApp() {
     initTimer();
-    renderHeader(); // Initial structure
-    renderSchedule(getFormattedDate(currentDate));
+    renderLayout(); // New full layout render
     initModal();
 }
 
@@ -25,13 +24,13 @@ function initTimer() {
             const nextPeriod = periods.find(p => !p.completed);
 
             if (nextPeriod) {
-                renderSchedule(getFormattedDate(currentDate));
+                renderLayout(); // Re-render stats and schedule
                 const label = nextPeriod.type === 'study' ? '집중 중...' : '휴식 중...';
                 startPeriod(nextPeriod.id, nextPeriod.duration, label);
             } else {
                 alert('모든 일정이 완료되었습니다! 수고하셨습니다.');
                 updateTimerDisplay(0);
-                renderSchedule(getFormattedDate(currentDate));
+                renderLayout();
                 updateControls('stopped');
             }
         },
@@ -95,97 +94,56 @@ function getFormattedDate(date) {
     return date.toISOString().split('T')[0];
 }
 
-function renderHeader() {
-    const main = document.querySelector('.app-main');
+// Main Render Function for Wireframe Layout
+function renderLayout() {
+    const main = document.querySelector('.app-main'); // This is #app .app-main from index.html (we might need to replace app-main clss behavior or just use it as root)
     if (!main) return;
 
-    // Calculate Goal Stats
-    const periods = PeriodRepository.getPeriodsForDate(getFormattedDate(currentDate));
-    let totalTodos = 0;
-    let completedTodos = 0;
+    // We want the structure:
+    // .app-container
+    //   .sidebar
+    //   .content
 
-    periods.forEach(p => {
-        if (p.todos) {
-            totalTodos += p.todos.length;
-            completedTodos += p.todos.filter(t => t.completed).length;
-        }
-    });
-
-    const rate = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
-
-    if (document.querySelector('.timer-section')) {
-        // Just update rate if exists
-        const rateEl = document.getElementById('goal-rate-display');
-        if (rateEl) rateEl.textContent = `목표 달성률: ${rate}%`;
-        return;
-    }
-
-    main.innerHTML = `
-        <div class="header-top-actions" style="position: absolute; top: 20px; right: 20px;">
-            <button id="exportBtn" class="btn btn-sm" title="이미지로 저장">📷 저장</button>
-        </div>
-
-        <div class="timer-section">
-            <div class="circular-timer-container">
-                <svg class="progress-ring" width="220" height="220">
-                    <circle class="progress-ring__circle-bg" stroke="var(--color-bg-input)" stroke-width="8" fill="transparent" r="100" cx="110" cy="110"/>
-                    <circle class="progress-ring__circle" stroke="var(--color-accent)" stroke-width="8" fill="transparent" r="100" cx="110" cy="110"/>
-                </svg>
-                <div class="timer-text">
-                    <h1 id="timer-numbers">00:00</h1>
-                    <p id="timer-label">준비</p>
-                </div>
+    // Check if structure exists, if not build it
+    let container = document.querySelector('.app-container');
+    if (!container) {
+        main.innerHTML = `
+            <div class="header-top-actions" style="position: absolute; top: 20px; right: 20px;">
+                <button id="exportBtn" class="btn btn-sm" title="이미지로 저장">📷 저장</button>
+            </div>
+            <div class="app-container">
+                <aside class="sidebar" id="sidebar">
+                    <!-- Timer & Stats -->
+                </aside>
+                <main class="content" id="list-content">
+                    <!-- Schedule -->
+                </main>
             </div>
             
-            <p id="goal-rate-display" class="goal-rate">목표 달성률: ${rate}%</p>
+            <button id="addPeriodBtn" class="btn btn-floating">+</button>
+            <div id="export-container"></div>
+        `;
 
-            <div class="timer-main-controls">
-                <button id="toggleTimerBtn" class="btn btn-primary btn-lg">시작</button>
-                <button id="resetTimerBtn" class="btn btn-transparent btn-lg" style="font-size: 0.9rem; color: #888;">초기화</button>
-            </div>
-        </div>
+        // Bind Fixed things
+        document.getElementById('addPeriodBtn').addEventListener('click', openModal);
+        document.getElementById('exportBtn').addEventListener('click', handleExport);
+    }
 
-        <div class="date-nav">
-            <button id="prevDate" class="btn btn-icon">&lt;</button>
-            <h2 id="currentDateDisplay">${currentDate.toLocaleDateString('ko-KR')}</h2>
-            <button id="nextDate" class="btn btn-icon">&gt;</button>
-        </div>
-        
-        <div id="schedule-container" class="schedule-container"></div>
-
-        <button id="addPeriodBtn" class="btn btn-primary btn-floating">+</button>
-
-        <!-- Hidden Container for Export -->
-        <div id="export-container"></div>
-    `;
-
-    document.getElementById('prevDate').addEventListener('click', () => changeDate(-1));
-    document.getElementById('nextDate').addEventListener('click', () => changeDate(1));
-    document.getElementById('addPeriodBtn').addEventListener('click', openModal);
-
-    document.getElementById('toggleTimerBtn').addEventListener('click', handleToggleTimer);
-    document.getElementById('resetTimerBtn').addEventListener('click', () => {
-        if (confirm('타이머를 초기화 하시겠습니까?')) {
-            activeTimer.stop();
-            document.querySelector('.progress-ring__circle').style.strokeDashoffset = 0;
-            document.querySelector('.progress-ring__circle').classList.remove('break-mode');
-            document.querySelector('.timer-text h1').classList.remove('break-mode-text');
-            document.getElementById('timer-numbers').textContent = '00:00';
-            document.getElementById('timer-label').textContent = '준비';
-            updateControls('stopped');
-        }
-    });
-
-    document.getElementById('exportBtn').addEventListener('click', handleExport);
+    renderSidebar();
+    renderScheduleList();
 }
 
-function handleExport() {
-    const container = document.getElementById('export-container');
-    const dateStr = currentDate.toLocaleDateString('ko-KR');
+function renderSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar) return;
 
+    // Calc Stats
     const periods = PeriodRepository.getPeriodsForDate(getFormattedDate(currentDate));
-    const totalStudy = periods.filter(p => p.type === 'study').reduce((a, b) => a + b.duration, 0);
-    const totalBreak = periods.filter(p => p.type === 'break').reduce((a, b) => a + b.duration, 0);
+    let totalStudyMins = periods.filter(p => p.type === 'study').reduce((a, b) => a + b.duration, 0);
+    // Format H:MM
+    const hours = Math.floor(totalStudyMins / 60);
+    const mins = totalStudyMins % 60;
+    const totalTimeStr = `${hours}시간 ${mins}분`; // "N시간 M분"
 
     let totalTodos = 0;
     let completedTodos = 0;
@@ -197,72 +155,74 @@ function handleExport() {
     });
     const rate = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
 
-    const scheduleHTML = document.getElementById('schedule-container').innerHTML;
+    // Timer HTML if not exists (preserved to avoid reset tick)
+    if (!sidebar.querySelector('.circular-timer-container')) {
+        sidebar.innerHTML = `
+             <div class="date-nav">
+                <button id="prevDate" class="btn btn-icon">&lt;</button>
+                <div class="date-display" id="currentDateDisplay">${currentDate.toLocaleDateString('ko-KR')}</div>
+                <button id="nextDate" class="btn btn-icon">&gt;</button>
+            </div>
 
-    container.innerHTML = `
-        <h2>${dateStr} 일정</h2>
-        <div style="margin-bottom: 20px; text-align: center; color: #aaa;">
-            총 집중: ${totalStudy}분 | 총 휴식: ${totalBreak}분 | 달성률: ${rate}%
-        </div>
-        <div class="schedule-export-list">
-            ${scheduleHTML}
-        </div>
-        <div style="margin-top: 30px; text-align: right; font-size: 0.8rem; color: #666;">
-            Generated by PomoToDo
-        </div>
-    `;
+            <div class="timer-section">
+                <div class="circular-timer-container">
+                    <svg class="progress-ring" width="220" height="220">
+                        <circle class="progress-ring__circle-bg" stroke="var(--color-bg-input)" stroke-width="8" fill="transparent" r="100" cx="110" cy="110"/>
+                        <circle class="progress-ring__circle" stroke="var(--color-accent)" stroke-width="8" fill="transparent" r="100" cx="110" cy="110"/>
+                    </svg>
+                    <div class="timer-text">
+                        <h1 id="timer-numbers">00:00</h1>
+                        <p id="timer-label">준비</p>
+                    </div>
+                </div>
+                
+                <div class="timer-main-controls">
+                    <button id="toggleTimerBtn" class="btn btn-primary btn-lg">시작</button>
+                    <button id="resetTimerBtn" class="btn btn-transparent btn-lg" style="font-size: 0.9rem; color: #888;">초기화</button>
+                </div>
+            </div>
 
-    html2canvas(container, {
-        backgroundColor: '#121212',
-        scale: 2
-    }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = `pomotodo-${getFormattedDate(currentDate)}.png`;
-        link.href = canvas.toDataURL();
-        link.click();
-        container.innerHTML = '';
-    }).catch(err => {
-        console.error('Export failed:', err);
-        alert('저장 실패');
-    });
-}
+            <div class="stats-container">
+                <div class="stat-item">
+                    <span class="stat-label">총 학습 시간</span>
+                    <span class="stat-value" id="total-focus-time">${totalTimeStr}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">목표 달성률</span>
+                    <span class="stat-value" id="goal-rate-display">${rate}%</span>
+                </div>
+            </div>
+        `;
 
-function handleToggleTimer() {
-    if (activeTimer.isRunning) {
-        activeTimer.pause();
-    } else {
-        if (!activeTimer.activePeriodId || activeTimer.remainingSeconds <= 0) {
-            const periods = PeriodRepository.getPeriodsForDate(getFormattedDate(currentDate));
-            const nextPeriod = periods.find(p => !p.completed);
+        // Listeners
+        document.getElementById('prevDate').addEventListener('click', () => changeDate(-1));
+        document.getElementById('nextDate').addEventListener('click', () => changeDate(1));
 
-            if (nextPeriod) {
-                const label = nextPeriod.type === 'study' ? '집중 중...' : '휴식 중...';
-                startPeriod(nextPeriod.id, nextPeriod.duration, label);
-            } else {
-                alert('모든 일정이 완료되었습니다! 새로운 세션을 추가하세요.');
+        document.getElementById('toggleTimerBtn').addEventListener('click', handleToggleTimer);
+        document.getElementById('resetTimerBtn').addEventListener('click', () => {
+            if (confirm('타이머를 초기화 하시겠습니까?')) {
+                activeTimer.stop();
+                document.querySelector('.progress-ring__circle').style.strokeDashoffset = 0;
+                document.querySelector('.progress-ring__circle').classList.remove('break-mode');
+                document.querySelector('.timer-text h1').classList.remove('break-mode-text');
+                document.getElementById('timer-numbers').textContent = '00:00';
+                document.getElementById('timer-label').textContent = '준비';
+                updateControls('stopped');
             }
-        } else {
-            activeTimer.intervalId = setInterval(() => activeTimer.tick(), 1000);
-            activeTimer.isRunning = true;
-            updateControls('running');
-        }
+        });
+    } else {
+        // Update Values only
+        document.getElementById('total-focus-time').textContent = totalTimeStr;
+        document.getElementById('goal-rate-display').textContent = `${rate}%`;
+        document.getElementById('currentDateDisplay').textContent = currentDate.toLocaleDateString('ko-KR');
     }
 }
 
-function changeDate(days) {
-    currentDate.setDate(currentDate.getDate() + days);
-    document.getElementById('currentDateDisplay').textContent = currentDate.toLocaleDateString('ko-KR');
-    // Clear header section to redraw stats? Or just update stats.
-    const container = document.querySelector('.app-main');
-    container.innerHTML = ''; // Full redraw for simplicity to update stats in header
-    renderApp();
-}
-
-async function renderSchedule(dateString) {
-    const container = document.getElementById('schedule-container');
+function renderScheduleList() {
+    const container = document.getElementById('list-content');
     if (!container) return;
 
-    const periods = PeriodRepository.getPeriodsForDate(dateString);
+    const periods = PeriodRepository.getPeriodsForDate(getFormattedDate(currentDate));
 
     if (periods.length === 0) {
         container.innerHTML = `
@@ -297,85 +257,80 @@ async function renderSchedule(dateString) {
         };
     });
 
-    groupObjects.sort((a, b) => {
+    groupObjects.sort((a, b) => { // User requested "Completed to Bottom"? Wireframe order is usually sequential. keeping sort for "Done" items.
         if (a.isComplete === b.isComplete) return 0;
         return a.isComplete ? 1 : -1;
     });
 
-    const groupHtml = groupObjects.map((groupObj, index) => {
+    const html = groupObjects.map((groupObj, index) => {
         const study = groupObj.periods.find(p => p.type === 'study');
         const breakP = groupObj.periods.find(p => p.type === 'break');
         const groupId = groupObj.gid;
-
-        // Todos belong to Study period primarily
         const todos = study ? (study.todos || []) : [];
 
+        // Wireframe Style: Header Outside, Body Inside
         return `
-        <div class="card period-group-card ${groupObj.isComplete ? 'completed-group' : ''}">
-            <div class="period-group-header">
-                <span class="period-number">Period ${index + 1}</span>
-            </div>
-            <div class="period-group-content">
-                <div class="period-info-row">
-                   <span class="info-label">Focus</span> ${study ? study.duration : 0} min 
-                   <span class="divider">|</span> 
-                   <span class="info-label">Break</span> ${breakP ? breakP.duration : 0} min
-                </div>
-                
-                <!-- Todo Section -->
-                <div class="todo-section">
-                    <ul class="todo-list" id="todo-list-${study ? study.id : ''}">
-                        ${todos.map(todo => `
-                            <li>
-                                <label class="checkbox-container">
-                                    <input type="checkbox" class="todo-checkbox" 
-                                        data-period-id="${study.id}" 
-                                        data-todo-id="${todo.id}" 
-                                        ${todo.completed ? 'checked' : ''}>
-                                    <span class="checkmark"></span>
-                                    <span class="todo-text ${todo.completed ? 'completed' : ''}">${todo.text}</span>
-                                </label>
-                            </li>
-                        `).join('')}
-                    </ul>
-                    ${study ? `
-                        <input type="text" class="todo-input" 
-                            data-period-id="${study.id}" 
-                            placeholder="할 일 추가... (Enter)">
-                    ` : ''}
-                </div>
-            </div>
-            ${groupId ? `
-                <button class="btn btn-icon btn-delete-group" data-group-id="${groupId}" title="그룹 삭제">
-                    🗑️
-                </button>
-            ` : ''}
+        <div class="period-wrapper ${groupObj.isComplete ? 'completed-group' : ''}">
+             <div class="period-header">
+                 <div class="period-label">
+                    ${index + 1}교시
+                 </div>
+                 <div class="period-time-info">
+                    공부 시간 : ${study ? study.duration : 0}분 <span class="divider">|</span> 쉬는 시간 : ${breakP ? breakP.duration : 0}분
+                    ${groupId ? `<button class="btn-delete-group-text" data-group-id="${groupId}">삭제</button>` : ''}
+                 </div>
+             </div>
+             
+             <div class="period-body">
+                 <ul class="todo-list">
+                    ${todos.map(todo => `
+                        <li>
+                            <label class="checkbox-container">
+                                <input type="checkbox" class="todo-checkbox" 
+                                    data-period-id="${study.id}" 
+                                    data-todo-id="${todo.id}" 
+                                    ${todo.completed ? 'checked' : ''}>
+                                <span class="checkmark"></span>
+                                <span class="todo-text ${todo.completed ? 'completed' : ''}">${todo.text}</span>
+                            </label>
+                        </li>
+                    `).join('')}
+                 </ul>
+                 ${study ? `
+                    <button class="btn-add-todo-block" data-period-id="${study.id}">
+                        +
+                    </button>
+                    <!-- Hidden Input for simpler interaction? Or prompt? Wireframe imply + adds item. Let's use prompt for simplicity or Toggle Input -->
+                 ` : ''}
+             </div>
         </div>
         `;
     }).join('');
 
-    container.innerHTML = groupHtml;
+    container.innerHTML = html;
 
     // Attach Listeners
-
     // Delete
-    document.querySelectorAll('.btn-delete-group').forEach(btn => {
+    document.querySelectorAll('.btn-delete-group-text').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const gid = e.currentTarget.dataset.groupId;
             if (confirm('이 세션 그룹을 삭제하시겠습니까?')) {
-                PeriodRepository.deletePeriodGroup(dateString, gid);
-                renderApp(); // Redraw all to update stats
+                PeriodRepository.deletePeriodGroup(getFormattedDate(currentDate), gid);
+                renderLayout();
             }
         });
     });
 
-    // Add Todo (Enter key)
-    document.querySelectorAll('.todo-input').forEach(input => {
-        input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && e.target.value.trim()) {
-                const pid = e.target.dataset.periodId;
-                TodoRepository.addTodoToPeriod(dateString, pid, e.target.value.trim());
-                renderApp(); // Redraw
+    // Add Todo (+)
+    document.querySelectorAll('.btn-add-todo-block').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const pid = e.currentTarget.dataset.periodId;
+            const text = prompt('할 일을 입력하세요'); // Use prompt to match "Click + to add" simple conceptual flow, unless inline input preferred. 
+            // Inline input is better UX. Let's try to swap button with input dynamically or just prompt for now to match wireframe visual cleaness.
+            // Wireframe "Plus button" implies click -> action.
+            if (text && text.trim()) {
+                TodoRepository.addTodoToPeriod(getFormattedDate(currentDate), pid, text.trim());
+                renderLayout();
             }
         });
     });
@@ -385,10 +340,69 @@ async function renderSchedule(dateString) {
         checkbox.addEventListener('change', (e) => {
             const pid = e.target.dataset.periodId;
             const tid = e.target.dataset.todoId;
-            TodoRepository.toggleTodo(dateString, pid, tid);
-            renderApp(); // Redraw
+            TodoRepository.toggleTodo(getFormattedDate(currentDate), pid, tid);
+            renderLayout();
         });
     });
+}
+
+function handleExport() {
+    const container = document.getElementById('export-container');
+    const dateStr = currentDate.toLocaleDateString('ko-KR');
+
+    // Build Export HTML (Simplified for image)
+    const stats = document.querySelector('.stats-container').innerHTML;
+    const schedule = document.getElementById('list-content').innerHTML;
+
+    container.innerHTML = `
+        <div style="padding: 20px; background: #121212; color: #fff;">
+            <h2 style="text-align:center; margin-bottom: 20px;">${dateStr} PomoToDo</h2>
+            <div style="display:flex; justify-content:center; margin-bottom: 30px;">
+                ${stats}
+            </div>
+            <div>
+                ${schedule}
+            </div>
+        </div>
+    `;
+
+    html2canvas(container, {
+        backgroundColor: '#121212',
+        scale: 2
+    }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `pomotodo-export.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+        container.innerHTML = '';
+    }).catch(err => console.error(err));
+}
+
+function handleToggleTimer() {
+    if (activeTimer.isRunning) {
+        activeTimer.pause();
+    } else {
+        if (!activeTimer.activePeriodId || activeTimer.remainingSeconds <= 0) {
+            const periods = PeriodRepository.getPeriodsForDate(getFormattedDate(currentDate));
+            const nextPeriod = periods.find(p => !p.completed); // Smart Start
+
+            if (nextPeriod) {
+                const label = nextPeriod.type === 'study' ? '집중 중...' : '휴식 중...';
+                startPeriod(nextPeriod.id, nextPeriod.duration, label);
+            } else {
+                alert('모든 일정이 완료되었습니다! 새로운 세션을 추가하세요.');
+            }
+        } else {
+            activeTimer.intervalId = setInterval(() => activeTimer.tick(), 1000);
+            activeTimer.isRunning = true;
+            updateControls('running');
+        }
+    }
+}
+
+function changeDate(days) {
+    currentDate.setDate(currentDate.getDate() + days);
+    renderLayout();
 }
 
 function startPeriod(id, duration, label) {
@@ -429,7 +443,7 @@ function initModal() {
     modal.innerHTML = `
         <div class="modal-content">
             <span class="close-modal">&times;</span>
-            <h3>세션 추가</h3>
+            <h3 style="margin-top:0">세션 추가</h3>
             <form id="addPeriodForm">
                 <div class="form-row">
                     <div class="form-group half">
@@ -441,7 +455,7 @@ function initModal() {
                         <input type="number" id="breakDuration" value="10" min="1" required>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary full-width">세션 추가</button>
+                <button type="submit" class="btn btn-primary full-width">추가하기</button>
             </form>
         </div>
     `;
@@ -477,7 +491,7 @@ function initModal() {
             completed: false
         });
 
-        renderApp();
+        renderLayout();
         closeModal();
     };
 }
