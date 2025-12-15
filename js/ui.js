@@ -7,6 +7,7 @@ let activeTimer = null;
 let currentTimerDuration = 0;
 
 export function renderApp() {
+    applyFontSettings();
     initTimer();
     renderLayout();
     initModal();
@@ -194,7 +195,7 @@ function initModal() {
             <form id="settingsForm">
                 <div class="form-group">
                     <label>타이머 모드</label>
-                    <div style="display: flex; gap: 10px;">
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
                         <label style="color: #fff; cursor: pointer;">
                             <input type="radio" name="timerMode" value="circular"> 원형 (Circular)
                         </label>
@@ -203,12 +204,42 @@ function initModal() {
                         </label>
                     </div>
                 </div>
-                <!-- Future settings can go here -->
-                <button type="submit" class="btn btn-primary full-width">저장</button>
+
+                <div class="form-group">
+                    <label style="margin-bottom:8px; display:block;">폰트 (Font)</label>
+                    <select id="fontSelect" name="fontFamily" style="width: 100%; padding: 10px; background: #333; border: 1px solid #444; color: #fff; border-radius: 4px; margin-bottom: 10px;">
+                        <option value="Inter">Inter (기본)</option>
+                        <option value="SchoolSafetyOcarina">학교안심 오카리나</option>
+                        <option value="SchoolSafeBoardMarker">학교안심 보드마카</option>
+                        <option value="NanumSquareRound">나눔스퀘어라운드</option>
+                        <option value="custom">사용자 지정 (Custom)</option>
+                    </select>
+                    
+                    <div id="customFontGroup" class="hidden" style="margin-top: 10px; padding: 10px; background: #222; border-radius: 4px;">
+                        <label style="font-size: 0.9rem; color: #aaa; margin-bottom: 5px; display:block;">Custom Font CSS (@font-face)</label>
+                        <textarea id="customFontCss" name="customFontCss" rows="6" style="width: 100%; padding: 8px; background: #333; border: 1px solid #444; color: #aaa; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="@font-face { ... }"></textarea>
+                        <p style="font-size: 0.8rem; color: #666; margin-top: 6px; line-height: 1.4;">
+                            * @font-face 코드를 입력하세요. "font-family" 이름을 자동으로 인식하여 적용합니다.
+                        </p>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary full-width" style="margin-top: 10px;">저장</button>
             </form>
         </div>
     `;
     settingsModal.querySelector('#settingsForm').onsubmit = handleSettingsSubmit;
+
+    // Add Listener for Font Select Toggle
+    const fontSelect = settingsModal.querySelector('#fontSelect');
+    const customGroup = settingsModal.querySelector('#customFontGroup');
+    fontSelect.addEventListener('change', (e) => {
+        if (e.target.value === 'custom') {
+            customGroup.classList.remove('hidden');
+        } else {
+            customGroup.classList.add('hidden');
+        }
+    });
 
     // Global Close
     window.onclick = (event) => {
@@ -334,8 +365,21 @@ function handleAddPeriodSubmit(e) {
 function openSettingsModal() {
     const state = getState();
     const mode = state.settings?.timerMode || 'circular';
+    const family = state.settings?.fontFamily || 'Inter';
+    const customCss = state.settings?.customFontCss || '';
+
     const form = document.querySelector('#settingsForm');
     form.elements['timerMode'].value = mode;
+    form.elements['fontFamily'].value = family;
+    form.elements['customFontCss'].value = customCss;
+
+    const customGroup = document.getElementById('customFontGroup');
+    if (family === 'custom') {
+        customGroup.classList.remove('hidden');
+    } else {
+        customGroup.classList.add('hidden');
+    }
+
     document.getElementById('settingsModal').classList.remove('hidden');
 }
 
@@ -343,13 +387,22 @@ function handleSettingsSubmit(e) {
     e.preventDefault();
     const form = e.target;
     const mode = form.elements['timerMode'].value;
+    const family = form.elements['fontFamily'].value;
+    const customCss = form.elements['customFontCss'].value;
 
     const state = getState();
     if (!state.settings) state.settings = {};
     state.settings.timerMode = mode;
-    saveState(state); // This should ideally trigger re-render if reactive, but we'll force it.
+    state.settings.fontFamily = family;
+    state.settings.customFontCss = customCss;
 
+    saveState(state);
+
+    applyFontSettings(); // Apply new fonts
     renderSidebar(); // Update sidebar immediately
+    // Ideally re-render whole layout to ensure font applies everywhere if needed, 
+    // but CSS variable change should be instant.
+
     document.getElementById('settingsModal').classList.add('hidden');
 }
 
@@ -709,8 +762,10 @@ function handleExport() {
     const goalRateText = document.getElementById('goal-rate-display').textContent;
     const schedule = document.getElementById('list-content').innerHTML;
 
+    const computedFont = getComputedStyle(document.body).fontFamily;
+
     container.innerHTML = `
-        <div style="padding: 40px; background: #121212; color: #fff; width: 800px; font-family: 'Inter', sans-serif;">
+        <div style="padding: 40px; background: #121212; color: #fff; width: 800px; font-family: ${computedFont};">
             <div style="font-size: 2.5rem; font-weight: bold; text-align: center; margin-bottom: 40px; letter-spacing: 0.1em;">
                 ${dateStr}
             </div>
@@ -880,4 +935,45 @@ function openModal() {
     breakInput.value = lastBreak ? lastBreak : '';
 
     document.getElementById('addPeriodModal').classList.remove('hidden');
+}
+// Font Helper
+function applyFontSettings() {
+    const state = getState();
+    const settings = state.settings || {};
+    const family = settings.fontFamily || 'Inter';
+    const customCss = settings.customFontCss || '';
+
+    // 1. Inject Custom CSS if needed
+    let styleTag = document.getElementById('custom-font-style');
+    if (!styleTag) {
+        styleTag = document.createElement('style');
+        styleTag.id = 'custom-font-style';
+        document.head.appendChild(styleTag);
+    }
+
+    // Only inject if there IS custom CSS content
+    styleTag.textContent = customCss;
+
+    // 2. Determine Font Family Name
+    let applyFamily = family;
+
+    if (family === 'custom') {
+        // Try to parse font-family from the CSS text
+        // Looks for: font-family: 'Name'; or "Name" or Name
+        const match = customCss.match(/font-family:\s*['"]?([^'";]+)['"]?/);
+        if (match && match[1]) {
+            applyFamily = match[1].trim();
+        } else {
+            // Fallback or keep as 'custom' which won't work? 
+            // If user didn't provide valid CSS, we default to sans-serif
+            applyFamily = 'sans-serif';
+        }
+    }
+
+    // 3. Apply to Root
+    // The CSS logic uses var(--font-family)
+    // We update the variable.
+    document.documentElement.style.setProperty('--font-family', `"${applyFamily}", sans-serif`);
+
+    // Also force it for good measure on body if needed, but style.css handles it.
 }
