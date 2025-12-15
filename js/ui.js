@@ -291,7 +291,12 @@ function showCustomAlert(message) {
     const newOk = okBtn.cloneNode(true);
     okBtn.parentNode.replaceChild(newOk, okBtn);
 
+    const timer = setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 10000);
+
     newOk.addEventListener('click', () => {
+        clearTimeout(timer);
         modal.classList.add('hidden');
     });
 }
