@@ -165,11 +165,11 @@ function initModal() {
                 <div class="form-row">
                     <div class="form-group half">
                         <label for="studyDuration">집중 시간 (분)</label>
-                        <input type="number" id="studyDuration" value="50" min="1" required>
+                        <input type="number" id="studyDuration" value="120" min="0" required>
                     </div>
                     <div class="form-group half">
                         <label for="breakDuration">휴식 시간 (분)</label>
-                        <input type="number" id="breakDuration" value="10" min="1" required>
+                        <input type="number" id="breakDuration" value="120" min="0" required>
                     </div>
                 </div>
                 <button type="submit" class="btn btn-primary full-width">추가하기</button>
