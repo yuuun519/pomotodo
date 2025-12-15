@@ -467,3 +467,23 @@ body {
 .timer-main-controls .btn {
     pointer-events: auto;
 }
+
+/* Clean Card Styles */
+.period-group-card.completed-group {
+    opacity: 0.4;
+    order: 100; /* Flex order if we used flex column, but we sort in JS */
+}
+.period-group-header {
+    padding-right: var(--spacing-sm);
+    font-weight: bold;
+    color: var(--color-accent);
+    min-width: 80px;
+}
+.period-info-text {
+    color: var(--color-text-primary);
+    font-size: 1rem;
+}
+.divider {
+    color: var(--color-text-secondary);
+    margin: 0 8px;
+}

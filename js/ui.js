@@ -19,18 +19,33 @@ function initTimer() {
             updateTimerDisplay(remainingSeconds);
         },
         onComplete: (periodId) => {
-            // Mark as complete and find next?
+            // 1. Mark as complete
             PeriodRepository.updatePeriod(getFormattedDate(currentDate), periodId, { completed: true });
 
-            // Audio Notification (Placeholder)
-            // playNotificationSound(); 
+            // 2. Play Sound (Future)
 
-            alert('세션 종료! 수고하셨습니다.');
-            updateTimerDisplay(0);
-            renderSchedule(getFormattedDate(currentDate));
-            updateControls('stopped');
+            // 3. Find Next Period automatically
+            // We need to re-fetch the list because we just updated one.
+            const periods = PeriodRepository.getPeriodsForDate(getFormattedDate(currentDate));
 
-            // Optional: Auto-start next? For now just stop.
+            // Logical order is creation order (assuming array preserves it). 
+            // We shouldn't rely on the "UI Sorted" order for logical progression, 
+            // but since the User wants "Completed to Bottom", the top of the UI list IS the next incomplete.
+
+            const nextPeriod = periods.find(p => !p.completed);
+
+            if (nextPeriod) {
+                // Seamless Transition
+                renderSchedule(getFormattedDate(currentDate)); // Update UI first (sorting happens here)
+                const label = nextPeriod.type === 'study' ? '집중 중...' : '휴식 중...';
+                startPeriod(nextPeriod.id, nextPeriod.duration, label);
+            } else {
+                // All done
+                alert('모든 일정이 완료되었습니다! 수고하셨습니다.');
+                updateTimerDisplay(0);
+                renderSchedule(getFormattedDate(currentDate));
+                updateControls('stopped');
+            }
         },
         onStatusChange: (status) => {
             updateControls(status);
@@ -54,7 +69,7 @@ function updateControls(status) {
 }
 
 function updateTimerDisplay(remainingSeconds) {
-    // Determine active type for color
+    // Determine active type for color styling
     let isBreak = false;
     if (activeTimer.activePeriodId) {
         const periods = PeriodRepository.getPeriodsForDate(getFormattedDate(currentDate));
@@ -66,7 +81,7 @@ function updateTimerDisplay(remainingSeconds) {
     const timeDisplay = document.getElementById('timer-numbers');
     if (timeDisplay) timeDisplay.textContent = Timer.formatTime(remainingSeconds);
 
-    // Update Circle
+    // Update Circle & Colors
     const circle = document.querySelector('.progress-ring__circle');
     const timerTextH1 = document.querySelector('.timer-text h1');
 
@@ -81,7 +96,6 @@ function updateTimerDisplay(remainingSeconds) {
     if (circle && currentTimerDuration > 0) {
         const radius = circle.r.baseVal.value;
         const circumference = radius * 2 * Math.PI;
-        // avoid divide by zero if currentTimerDuration is 0 (shouldn't happen if running)
         const duration = currentTimerDuration || 1;
         const offset = circumference - (remainingSeconds / (duration * 60)) * circumference;
 
@@ -141,6 +155,7 @@ function renderHeader() {
             activeTimer.stop();
             document.querySelector('.progress-ring__circle').style.strokeDashoffset = 0;
             document.querySelector('.progress-ring__circle').classList.remove('break-mode');
+            document.querySelector('.timer-text h1').classList.remove('break-mode-text');
             document.getElementById('timer-numbers').textContent = '00:00';
             document.getElementById('timer-label').textContent = '준비';
             updateControls('stopped');
@@ -152,7 +167,6 @@ function handleToggleTimer() {
     if (activeTimer.isRunning) {
         activeTimer.pause();
     } else {
-        // Smart Start Logic
         if (!activeTimer.activePeriodId || activeTimer.remainingSeconds <= 0) {
             // Find first incomplete period
             const periods = PeriodRepository.getPeriodsForDate(getFormattedDate(currentDate));
@@ -197,26 +211,57 @@ async function renderSchedule(dateString) {
 
     // Grouping Logic
     const groups = {};
+    const groupOrder = []; // To preserve creation order of groups for numbering if needed?
+    // Actually, we want to group distinct GIDs.
+
     periods.forEach(p => {
-        const gid = p.groupId || p.id; // Fallback to ID if no group
-        if (!groups[gid]) groups[gid] = [];
+        const gid = p.groupId || p.id;
+        if (!groups[gid]) {
+            groups[gid] = [];
+            groupOrder.push(gid);
+        }
         groups[gid].push(p);
     });
 
-    const groupHtml = Object.values(groups).map(groupPeriods => {
-        // Assume group has [study, break] or just one
-        const study = groupPeriods.find(p => p.type === 'study');
-        const breakP = groupPeriods.find(p => p.type === 'break');
+    // Create Group Objects for sorting
+    let groupObjects = groupOrder.map((gid, index) => {
+        const groupPeriods = groups[gid];
+        // Check if ALL periods in this group are completed? Or ANY?
+        // User wants "Completed Periods" to bottom.
+        // Usually a group is complete if both parts are complete.
+        const isComplete = groupPeriods.every(p => p.completed);
+        return {
+            gid,
+            periods: groupPeriods,
+            isComplete,
+            originalIndex: index + 1
+        };
+    });
 
-        // Use the ID of the group's first element or groupId for delete
-        const groupId = groupPeriods[0].groupId;
+    // Sort: Incomplete first, Complete last
+    groupObjects.sort((a, b) => {
+        if (a.isComplete === b.isComplete) return 0;
+        return a.isComplete ? 1 : -1;
+    });
+
+    const groupHtml = groupObjects.map((groupObj, index) => {
+        const study = groupObj.periods.find(p => p.type === 'study');
+        const breakP = groupObj.periods.find(p => p.type === 'break');
+        const groupId = groupObj.gid; // for delete
+
+        // Format: "Period {N} [ Study: XX min | Break: XX min ]"
+        // Using "Period {index+1}" (visual index in the sorted list? or original?)
+        // Let's use visual index for now as it's cleaner.
 
         return `
-        <div class="card period-group-card">
+        <div class="card period-group-card ${groupObj.isComplete ? 'completed-group' : ''}">
+            <div class="period-group-header">
+                <span class="period-number">Period ${index + 1}</span>
+            </div>
             <div class="period-group-content">
-                ${study ? renderPeriodBlock(study, 'study') : ''}
-                ${breakP ? `<div class="period-divider"></div>` : ''}
-                ${breakP ? renderPeriodBlock(breakP, 'break') : ''}
+                <div class="period-info-text">
+                   [ Study: ${study ? study.duration : 0} min <span class="divider">|</span> Break: ${breakP ? breakP.duration : 0} min ]
+                </div>
             </div>
             ${groupId ? `
                 <button class="btn btn-icon btn-delete-group" data-group-id="${groupId}" title="그룹 삭제">
@@ -229,47 +274,16 @@ async function renderSchedule(dateString) {
 
     container.innerHTML = groupHtml;
 
-    // Attach Listeners
-    document.querySelectorAll('.btn-play-mini').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation(); // prevent bubbling if needed
-            const id = e.target.dataset.id;
-            const duration = parseInt(e.target.dataset.duration);
-            const type = e.target.dataset.type;
-            const label = type === 'study' ? '집중 중...' : '휴식 중...';
-            startPeriod(id, duration, label);
-        });
-    });
-
+    // Attach Delete Listeners
     document.querySelectorAll('.btn-delete-group').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const gid = e.currentTarget.dataset.groupId; // Use currentTarget for button
+            const gid = e.currentTarget.dataset.groupId;
             if (confirm('이 세션 그룹을 삭제하시겠습니까?')) {
                 PeriodRepository.deletePeriodGroup(dateString, gid);
                 renderSchedule(dateString);
             }
         });
     });
-}
-
-function renderPeriodBlock(period, type) {
-    const label = type === 'study' ? '집중' : '휴식';
-    const statusClass = period.completed ? 'status-completed' : (period.id === activeTimer?.activePeriodId ? 'status-active' : '');
-
-    return `
-        <div class="period-block ${type}-block ${statusClass}" onclick="/* Optional: trigger select */">
-            <div class="period-meta">
-                <span class="period-type-label">${label}</span>
-                <span class="period-duration-label">${period.duration}분</span>
-            </div>
-            <button class="btn btn-icon btn-play-mini" 
-                data-id="${period.id}" 
-                data-duration="${period.duration}" 
-                data-type="${period.type}">
-                ${period.completed ? '✓' : '▶'}
-            </button>
-        </div>
-    `;
 }
 
 function startPeriod(id, duration, label) {
@@ -281,8 +295,6 @@ function startPeriod(id, duration, label) {
 
     // Reset circle
     const circle = document.querySelector('.progress-ring__circle');
-    const radius = circle.r.baseVal.value;
-    const circumference = radius * 2 * Math.PI;
     circle.style.strokeDashoffset = 0;
 
     // Update colors immediately based on type
@@ -299,7 +311,6 @@ function startPeriod(id, duration, label) {
 
     activeTimer.start(duration, id);
     updateControls('running');
-    renderSchedule(getFormattedDate(currentDate)); // Update active status in list
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -347,7 +358,6 @@ function initModal() {
 
         const groupId = crypto.randomUUID();
 
-        // Add Study
         PeriodRepository.addPeriod(getFormattedDate(currentDate), {
             id: crypto.randomUUID(),
             groupId,
@@ -356,7 +366,6 @@ function initModal() {
             completed: false
         });
 
-        // Add Break
         PeriodRepository.addPeriod(getFormattedDate(currentDate), {
             id: crypto.randomUUID(),
             groupId,
