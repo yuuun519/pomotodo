@@ -314,3 +314,56 @@ body {
     background: rgba(187, 134, 252, 0.3);
     transform: scale(1.1);
 }
+
+/* Circular Timer */
+.timer-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: var(--spacing-xl);
+    padding-top: var(--spacing-lg);
+}
+.circular-timer-container {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    margin-bottom: var(--spacing-md);
+}
+.progress-ring__circle, .progress-ring__circle-bg {
+    transition: stroke-dashoffset 0.35s;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+}
+.timer-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+.timer-text h1 {
+    font-size: 2.5rem;
+    margin: 0;
+    color: var(--color-text-primary);
+}
+.timer-text p {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 1rem;
+}
+.timer-main-controls {
+    display: flex;
+    gap: var(--spacing-md);
+}
+.btn-lg {
+    padding: 10px 24px;
+    font-size: 1.1rem;
+}
+/* Form Row for split inputs */
+.form-row {
+    display: flex;
+    gap: var(--spacing-md);
+}
+.form-group.half {
+    flex: 1;
+}

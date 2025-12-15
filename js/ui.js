@@ -4,10 +4,11 @@ import { Timer } from './timer.js';
 
 let currentDate = new Date();
 let activeTimer = null;
+let currentTimerDuration = 0; // Needed for circle calculation
 
 export function renderApp() {
     initTimer();
-    renderHeader(); // Initial structure
+    renderHeader(); // Initial structure including Timer
     renderSchedule(getFormattedDate(currentDate));
     initModal();
 }
@@ -18,24 +19,52 @@ function initTimer() {
             updateTimerDisplay(remainingSeconds);
         },
         onComplete: (periodId) => {
-            // Mark period as complete in store
-            // PeriodRepository.updatePeriod(getFormattedDate(currentDate), periodId, { completed: true }); // Need date context
-            alert('Focus Session Complete!');
-            renderTimerBar(false);
+            // PeriodRepository.updatePeriod(getFormattedDate(currentDate), periodId, { completed: true });
+            alert('세션 종료! 수고하셨습니다.');
+            // renderTimerBar(false); // We keep the top timer, just reset?
+            updateTimerDisplay(0);
             renderSchedule(getFormattedDate(currentDate));
         },
         onStatusChange: (status) => {
             console.log('Timer status:', status);
+            updateControls(status);
         }
     });
 }
 
+function updateControls(status) {
+    const btn = document.getElementById('toggleTimerBtn');
+    if (!btn) return;
+
+    if (status === 'paused' || status === 'stopped') {
+        btn.textContent = '시작'; // Start
+        btn.classList.remove('btn-danger');
+        btn.classList.add('btn-primary');
+    } else {
+        btn.textContent = '일시정지'; // Pause
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-danger'); // Use danger color for pause/stop visibility or just neutral
+    }
+}
+
 function updateTimerDisplay(remainingSeconds) {
-    const timeDisplay = document.getElementById('activeTimerDisplay');
+    // Numeric Display
+    const timeDisplay = document.getElementById('timer-numbers');
     if (timeDisplay) {
         timeDisplay.textContent = Timer.formatTime(remainingSeconds);
     }
-    // Also update tab title
+
+    // Circular Progress
+    const circle = document.querySelector('.progress-ring__circle');
+    if (circle && currentTimerDuration > 0) {
+        const radius = circle.r.baseVal.value;
+        const circumference = radius * 2 * Math.PI;
+        const offset = circumference - (remainingSeconds / (currentTimerDuration * 60)) * circumference;
+
+        circle.style.strokeDasharray = `${circumference} ${circumference}`;
+        circle.style.strokeDashoffset = offset;
+    }
+
     document.title = `${Timer.formatTime(remainingSeconds)} - PomoToDo`;
 }
 
@@ -46,12 +75,31 @@ function getFormattedDate(date) {
 function renderHeader() {
     const main = document.querySelector('.app-main');
     if (!main) return;
-    if (document.querySelector('.date-nav')) return;
+    if (document.querySelector('.timer-section')) return;
 
+    // New Layout: Timer at Top, then Date Nav, then Schedule
     main.innerHTML = `
+        <div class="timer-section">
+            <div class="circular-timer-container">
+                <svg class="progress-ring" width="220" height="220">
+                    <circle class="progress-ring__circle-bg" stroke="var(--color-bg-input)" stroke-width="8" fill="transparent" r="100" cx="110" cy="110"/>
+                    <circle class="progress-ring__circle" stroke="var(--color-accent)" stroke-width="8" fill="transparent" r="100" cx="110" cy="110"/>
+                </svg>
+                <div class="timer-text">
+                    <h1 id="timer-numbers">00:00</h1>
+                    <p id="timer-label">준비</p>
+                </div>
+            </div>
+            
+            <div class="timer-main-controls">
+                <button id="toggleTimerBtn" class="btn btn-primary btn-lg">시작</button>
+                <button id="resetTimerBtn" class="btn btn-secondary btn-lg">초기화</button>
+            </div>
+        </div>
+
         <div class="date-nav">
             <button id="prevDate" class="btn btn-icon">&lt;</button>
-            <h2 id="currentDateDisplay">${currentDate.toLocaleDateString()}</h2>
+            <h2 id="currentDateDisplay">${currentDate.toLocaleDateString('ko-KR')}</h2>
             <button id="nextDate" class="btn btn-icon">&gt;</button>
         </div>
         
@@ -60,64 +108,42 @@ function renderHeader() {
         </div>
 
         <button id="addPeriodBtn" class="btn btn-primary btn-floating">+</button>
-        
-        <div id="timerBar" class="timer-bar hidden">
-            <div class="timer-info">
-                <span id="activeTimerType">Focus</span>
-                <span id="activeTimerDisplay">00:00</span>
-            </div>
-            <div class="timer-controls">
-                <button id="pauseTimerBtn" class="btn btn-sm">Pause</button>
-                <button id="stopTimerBtn" class="btn btn-sm btn-danger">Stop</button>
-            </div>
-        </div>
     `;
 
     document.getElementById('prevDate').addEventListener('click', () => changeDate(-1));
     document.getElementById('nextDate').addEventListener('click', () => changeDate(1));
     document.getElementById('addPeriodBtn').addEventListener('click', openModal);
 
-    document.getElementById('pauseTimerBtn').addEventListener('click', () => {
-        if (activeTimer.isRunning) {
-            activeTimer.pause();
-            document.getElementById('pauseTimerBtn').textContent = 'Resume';
-        } else {
-            activeTimer.start(0, activeTimer.activePeriodId); // Resume (0 means don't reset)
-            // Limitation: Timer.start reset logic needs improvement for resume
-            // Actually Timer.start logic I wrote resets if new ID. Resuming needs care.
-            // For prototype, let's just toggle text and rely on naive resume or fix Timer class.
-            // Fix: accessing internal start logic.
-            if (activeTimer.intervalId) {
-                // It's paused but interval cleared.
-                activeTimer.start(activeTimer.remainingSeconds / 60, activeTimer.activePeriodId);
-            } else {
-                activeTimer.start(activeTimer.remainingSeconds / 60, activeTimer.activePeriodId);
-            }
-            document.getElementById('pauseTimerBtn').textContent = 'Pause';
+    document.getElementById('toggleTimerBtn').addEventListener('click', handleToggleTimer);
+    document.getElementById('resetTimerBtn').addEventListener('click', () => {
+        if (confirm('타이머를 초기화 하시겠습니까?')) {
+            activeTimer.stop();
+            updateTimerDisplay(currentTimerDuration * 60);
+            updateControls('stopped');
         }
-    });
-
-    document.getElementById('stopTimerBtn').addEventListener('click', () => {
-        activeTimer.stop();
-        renderTimerBar(false);
-        document.title = 'PomoToDo';
     });
 }
 
-function renderTimerBar(visible, type = 'Focus') {
-    const bar = document.getElementById('timerBar');
-    if (visible) {
-        bar.classList.remove('hidden');
-        document.getElementById('activeTimerType').textContent = type === 'study' ? 'Focus' : 'Break';
-        document.getElementById('pauseTimerBtn').textContent = 'Pause';
+function handleToggleTimer() {
+    if (activeTimer.isRunning) {
+        activeTimer.pause();
     } else {
-        bar.classList.add('hidden');
+        // If has active period, resume. If not, maybe warn?
+        if (activeTimer.activePeriodId) {
+            const seconds = activeTimer.remainingSeconds > 0 ? activeTimer.remainingSeconds : currentTimerDuration * 60;
+            // Hacky resume for now
+            activeTimer.intervalId = setInterval(() => activeTimer.tick(), 1000);
+            activeTimer.isRunning = true;
+            updateControls('running');
+        } else {
+            alert('재생할 세션을 선택해주세요.');
+        }
     }
 }
 
 function changeDate(days) {
     currentDate.setDate(currentDate.getDate() + days);
-    document.getElementById('currentDateDisplay').textContent = currentDate.toLocaleDateString();
+    document.getElementById('currentDateDisplay').textContent = currentDate.toLocaleDateString('ko-KR');
     renderSchedule(getFormattedDate(currentDate));
 }
 
@@ -130,8 +156,8 @@ async function renderSchedule(dateString) {
     if (periods.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <p>No plans for this day.</p>
-                <p class="text-secondary">Tap + to add a focus period.</p>
+                <p>일정이 없습니다.</p>
+                <p class="text-secondary">+ 버튼을 눌러 집중 세션을 추가하세요.</p>
             </div>
         `;
         return;
@@ -139,19 +165,14 @@ async function renderSchedule(dateString) {
 
     container.innerHTML = periods.map(period => `
         <div class="card period-card type-${period.type} ${period.completed ? 'completed' : ''}">
-            <div class="period-time">
-                ${period.type.toUpperCase()}
-            </div>
             <div class="period-info">
-                <h4>${period.type === 'study' ? 'Focus Session' : 'Break'}</h4>
-                <p>${period.duration} min</p>
+                <h4>${period.type === 'study' ? '집중 (Focus)' : '휴식 (Break)'}</h4>
+                <p>${period.duration}분</p>
             </div>
             <div class="period-actions">
-                ${!period.completed ? `
-                    <button class="btn btn-icon btn-start" data-id="${period.id}" data-duration="${period.duration}" data-type="${period.type}">
-                        ▶
-                    </button>
-                ` : '<span>✓</span>'}
+               <button class="btn btn-icon btn-start" data-id="${period.id}" data-duration="${period.duration}" data-type="${period.type}">
+                    ▶
+               </button>
             </div>
         </div>
     `).join('');
@@ -162,24 +183,61 @@ async function renderSchedule(dateString) {
             const id = e.target.dataset.id;
             const duration = parseInt(e.target.dataset.duration);
             const type = e.target.dataset.type;
-            startPeriod(id, duration, type);
+            const label = type === 'study' ? '집중 중...' : '휴식 중...';
+            startPeriod(id, duration, label);
         });
     });
 }
 
-function startPeriod(id, duration, type) {
-    activeTimer.stop(); // Stop any existing
+function startPeriod(id, duration, label) {
+    activeTimer.stop();
+    currentTimerDuration = duration;
+    document.getElementById('timer-label').textContent = label;
+    updateTimerDisplay(duration * 60); // Set initial visual
     activeTimer.start(duration, id);
-    renderTimerBar(true, type);
+    updateControls('running');
+
+    // Scroll to top to show timer
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // --- Modal Logic ---
 function initModal() {
-    const modal = document.getElementById('addPeriodModal');
-    const closeBtn = document.querySelector('.close-modal');
-    const form = document.getElementById('addPeriodForm');
+    // Inject improved modal HTML if needed or assume index.html has it.
+    // We need to UPDATE index.html's modal structure first or inject it here.
+    // Let's inject it to be safe and cleaner.
 
-    if (!modal) return;
+    let modal = document.getElementById('addPeriodModal');
+    if (!modal) {
+        // Create it
+        modal = document.createElement('div');
+        modal.id = 'addPeriodModal';
+        modal.className = 'modal hidden';
+        document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3>세션 추가</h3>
+            <form id="addPeriodForm">
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="studyDuration">집중 시간 (분)</label>
+                        <input type="number" id="studyDuration" value="50" min="1" required>
+                    </div>
+                    <div class="form-group half">
+                        <label for="breakDuration">휴식 시간 (분)</label>
+                        <input type="number" id="breakDuration" value="10" min="1" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary full-width">세션 추가</button>
+            </form>
+        </div>
+    `;
+
+    const closeBtn = modal.querySelector('.close-modal');
+    const form = modal.querySelector('#addPeriodForm');
 
     closeBtn.onclick = closeModal;
     window.onclick = (event) => {
@@ -188,20 +246,27 @@ function initModal() {
 
     form.onsubmit = (e) => {
         e.preventDefault();
-        const type = document.getElementById('periodType').value;
-        const duration = parseInt(document.getElementById('periodDuration').value);
+        const studyTime = parseInt(document.getElementById('studyDuration').value);
+        const breakTime = parseInt(document.getElementById('breakDuration').value);
 
-        const newPeriod = {
+        // Add Study Period
+        PeriodRepository.addPeriod(getFormattedDate(currentDate), {
             id: crypto.randomUUID(),
-            type,
-            duration,
+            type: 'study',
+            duration: studyTime,
             completed: false
-        };
+        });
 
-        PeriodRepository.addPeriod(getFormattedDate(currentDate), newPeriod);
+        // Add Break Period
+        PeriodRepository.addPeriod(getFormattedDate(currentDate), {
+            id: crypto.randomUUID(),
+            type: 'break',
+            duration: breakTime,
+            completed: false
+        });
+
         renderSchedule(getFormattedDate(currentDate));
         closeModal();
-        form.reset();
     };
 }
 
