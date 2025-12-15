@@ -1,5 +1,5 @@
 // UI Module
-import { PeriodRepository } from './store.js';
+import { PeriodRepository, TodoRepository } from './store.js';
 import { Timer } from './timer.js';
 
 let currentDate = new Date();
@@ -8,7 +8,7 @@ let currentTimerDuration = 0;
 
 export function renderApp() {
     initTimer();
-    renderHeader();
+    renderHeader(); // Initial structure
     renderSchedule(getFormattedDate(currentDate));
     initModal();
 }
@@ -98,7 +98,27 @@ function getFormattedDate(date) {
 function renderHeader() {
     const main = document.querySelector('.app-main');
     if (!main) return;
-    if (document.querySelector('.timer-section')) return;
+
+    // Calculate Goal Stats
+    const periods = PeriodRepository.getPeriodsForDate(getFormattedDate(currentDate));
+    let totalTodos = 0;
+    let completedTodos = 0;
+
+    periods.forEach(p => {
+        if (p.todos) {
+            totalTodos += p.todos.length;
+            completedTodos += p.todos.filter(t => t.completed).length;
+        }
+    });
+
+    const rate = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
+
+    if (document.querySelector('.timer-section')) {
+        // Just update rate if exists
+        const rateEl = document.getElementById('goal-rate-display');
+        if (rateEl) rateEl.textContent = `목표 달성률: ${rate}%`;
+        return;
+    }
 
     main.innerHTML = `
         <div class="header-top-actions" style="position: absolute; top: 20px; right: 20px;">
@@ -117,6 +137,8 @@ function renderHeader() {
                 </div>
             </div>
             
+            <p id="goal-rate-display" class="goal-rate">목표 달성률: ${rate}%</p>
+
             <div class="timer-main-controls">
                 <button id="toggleTimerBtn" class="btn btn-primary btn-lg">시작</button>
                 <button id="resetTimerBtn" class="btn btn-transparent btn-lg" style="font-size: 0.9rem; color: #888;">초기화</button>
@@ -158,23 +180,29 @@ function renderHeader() {
 }
 
 function handleExport() {
-    // 1. Prepare Data
     const container = document.getElementById('export-container');
     const dateStr = currentDate.toLocaleDateString('ko-KR');
 
-    // Get schedule stats
     const periods = PeriodRepository.getPeriodsForDate(getFormattedDate(currentDate));
     const totalStudy = periods.filter(p => p.type === 'study').reduce((a, b) => a + b.duration, 0);
     const totalBreak = periods.filter(p => p.type === 'break').reduce((a, b) => a + b.duration, 0);
 
-    // Reuse rendering logic but slightly static for image
-    // Basically inject the existing schedule innerHTML or rebuild simpler
+    let totalTodos = 0;
+    let completedTodos = 0;
+    periods.forEach(p => {
+        if (p.todos) {
+            totalTodos += p.todos.length;
+            completedTodos += p.todos.filter(t => t.completed).length;
+        }
+    });
+    const rate = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
+
     const scheduleHTML = document.getElementById('schedule-container').innerHTML;
 
     container.innerHTML = `
         <h2>${dateStr} 일정</h2>
-        <div style="margin-bottom: 20px; text-align: center; color: #888;">
-            총 집중: ${totalStudy}분 | 총 휴식: ${totalBreak}분
+        <div style="margin-bottom: 20px; text-align: center; color: #aaa;">
+            총 집중: ${totalStudy}분 | 총 휴식: ${totalBreak}분 | 달성률: ${rate}%
         </div>
         <div class="schedule-export-list">
             ${scheduleHTML}
@@ -184,22 +212,18 @@ function handleExport() {
         </div>
     `;
 
-    // 2. Capture
     html2canvas(container, {
         backgroundColor: '#121212',
-        scale: 2 // High res
+        scale: 2
     }).then(canvas => {
-        // 3. Download
         const link = document.createElement('a');
-        link.download = `pomotodo-schedule-${getFormattedDate(currentDate)}.png`;
+        link.download = `pomotodo-${getFormattedDate(currentDate)}.png`;
         link.href = canvas.toDataURL();
         link.click();
-
-        // Cleanup
         container.innerHTML = '';
     }).catch(err => {
         console.error('Export failed:', err);
-        alert('이미지 저장 중 오류가 발생했습니다.');
+        alert('저장 실패');
     });
 }
 
@@ -228,7 +252,10 @@ function handleToggleTimer() {
 function changeDate(days) {
     currentDate.setDate(currentDate.getDate() + days);
     document.getElementById('currentDateDisplay').textContent = currentDate.toLocaleDateString('ko-KR');
-    renderSchedule(getFormattedDate(currentDate));
+    // Clear header section to redraw stats? Or just update stats.
+    const container = document.querySelector('.app-main');
+    container.innerHTML = ''; // Full redraw for simplicity to update stats in header
+    renderApp();
 }
 
 async function renderSchedule(dateString) {
@@ -280,14 +307,42 @@ async function renderSchedule(dateString) {
         const breakP = groupObj.periods.find(p => p.type === 'break');
         const groupId = groupObj.gid;
 
+        // Todos belong to Study period primarily
+        const todos = study ? (study.todos || []) : [];
+
         return `
         <div class="card period-group-card ${groupObj.isComplete ? 'completed-group' : ''}">
             <div class="period-group-header">
                 <span class="period-number">Period ${index + 1}</span>
             </div>
             <div class="period-group-content">
-                <div class="period-info-text">
-                   [ Study: ${study ? study.duration : 0} min <span class="divider">|</span> Break: ${breakP ? breakP.duration : 0} min ]
+                <div class="period-info-row">
+                   <span class="info-label">Focus</span> ${study ? study.duration : 0} min 
+                   <span class="divider">|</span> 
+                   <span class="info-label">Break</span> ${breakP ? breakP.duration : 0} min
+                </div>
+                
+                <!-- Todo Section -->
+                <div class="todo-section">
+                    <ul class="todo-list" id="todo-list-${study ? study.id : ''}">
+                        ${todos.map(todo => `
+                            <li>
+                                <label class="checkbox-container">
+                                    <input type="checkbox" class="todo-checkbox" 
+                                        data-period-id="${study.id}" 
+                                        data-todo-id="${todo.id}" 
+                                        ${todo.completed ? 'checked' : ''}>
+                                    <span class="checkmark"></span>
+                                    <span class="todo-text ${todo.completed ? 'completed' : ''}">${todo.text}</span>
+                                </label>
+                            </li>
+                        `).join('')}
+                    </ul>
+                    ${study ? `
+                        <input type="text" class="todo-input" 
+                            data-period-id="${study.id}" 
+                            placeholder="할 일 추가... (Enter)">
+                    ` : ''}
                 </div>
             </div>
             ${groupId ? `
@@ -301,13 +356,37 @@ async function renderSchedule(dateString) {
 
     container.innerHTML = groupHtml;
 
+    // Attach Listeners
+
+    // Delete
     document.querySelectorAll('.btn-delete-group').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const gid = e.currentTarget.dataset.groupId;
             if (confirm('이 세션 그룹을 삭제하시겠습니까?')) {
                 PeriodRepository.deletePeriodGroup(dateString, gid);
-                renderSchedule(dateString);
+                renderApp(); // Redraw all to update stats
             }
+        });
+    });
+
+    // Add Todo (Enter key)
+    document.querySelectorAll('.todo-input').forEach(input => {
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.target.value.trim()) {
+                const pid = e.target.dataset.periodId;
+                TodoRepository.addTodoToPeriod(dateString, pid, e.target.value.trim());
+                renderApp(); // Redraw
+            }
+        });
+    });
+
+    // Toggle Todo
+    document.querySelectorAll('.todo-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', (e) => {
+            const pid = e.target.dataset.periodId;
+            const tid = e.target.dataset.todoId;
+            TodoRepository.toggleTodo(dateString, pid, tid);
+            renderApp(); // Redraw
         });
     });
 }
@@ -398,7 +477,7 @@ function initModal() {
             completed: false
         });
 
-        renderSchedule(getFormattedDate(currentDate));
+        renderApp();
         closeModal();
     };
 }
